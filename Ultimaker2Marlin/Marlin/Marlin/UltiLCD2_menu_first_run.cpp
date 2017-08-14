@@ -12,12 +12,24 @@
 #include "UltiLCD2_menu_first_run.h"
 #include "UltiLCD2_menu_print.h"
 
+// NOTE that for single and multiple toolheads, the X_MAX_POS and Y_MAX_LENGTH
+// should be different!!
+
 #define BED_CENTER_ADJUST_X (X_MAX_POS/2)
 #define BED_CENTER_ADJUST_Y (Y_MAX_LENGTH - 10)
+#define BED_CENTER_ADJUST_Z 35
 #define BED_LEFT_ADJUST_X 10
 #define BED_LEFT_ADJUST_Y 20
 #define BED_RIGHT_ADJUST_X (X_MAX_POS - 10)
 #define BED_RIGHT_ADJUST_Y 20
+
+#define BED_CENTER_ADJUST_X_M (X_MAX_POS_M/2)
+#define BED_CENTER_ADJUST_Y_M (Y_MAX_LENGTH_M - 10)
+#define BED_CENTER_ADJUST_Z_M 55 // needs to be more for big tool head
+#define BED_LEFT_ADJUST_X_M 10
+#define BED_LEFT_ADJUST_Y_M 20
+#define BED_RIGHT_ADJUST_X_M (X_MAX_POS_M - 10)
+#define BED_RIGHT_ADJUST_Y_M 20
 
 static void lcd_menu_first_run_init_2();
 static void lcd_menu_first_run_init_3();
@@ -65,7 +77,14 @@ static void homeAndParkHeadForCenterAdjustment2()
     add_homeing[Z_AXIS] = 0;
     enquecommand_P(PSTR("G28 Z0 X0 Y0"));
     char buffer[32];
-    sprintf_P(buffer, PSTR("G1 F%i Z%i X%i Y%i"), int(homing_feedrate[0]), 35, int(BED_CENTER_ADJUST_X), int(BED_CENTER_ADJUST_Y));
+    #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+      sprintf_P(buffer, PSTR("G1 F%i Z%i X%i Y%i"), int(homing_feedrate[0]),
+                                                    int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_Z, BED_CENTER_ADJUST_Z_M)),
+                                                    int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_X, BED_CENTER_ADJUST_X_M)),
+                                                    int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_Y, BED_CENTER_ADJUST_Y_M)));
+    #else
+      sprintf_P(buffer, PSTR("G1 F%i Z%i X%i Y%i"), int(homing_feedrate[0]), int(BED_CENTER_ADJUST_Z), int(BED_CENTER_ADJUST_X), int(BED_CENTER_ADJUST_Y));
+    #endif
     enquecommand(buffer);
 }
 //Started bed leveling from the calibration menu
@@ -83,7 +102,11 @@ static void homeAndRaiseBed()
 {
     enquecommand_P(PSTR("G28 Z0"));
     char buffer[32];
-    sprintf_P(buffer, PSTR("G1 F%i Z%i"), int(homing_feedrate[0]), 35);
+    #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+      sprintf_P(buffer, PSTR("G1 F%i Z%i"), int(homing_feedrate[0]), int( CHOOSE_BY_EXTRUSION_MODE( BED_CENTER_ADJUST_Z, BED_CENTER_ADJUST_Z_M)));
+    #else
+      sprintf_P(buffer, PSTR("G1 F%i Z%i"), int(homing_feedrate[0]), int(BED_CENTER_ADJUST_Z));
+    #endif
     enquecommand(buffer);
 }
 
@@ -103,7 +126,14 @@ static void homeAndParkHeadForCenterAdjustment()
 {
     enquecommand_P(PSTR("G28 X0 Y0"));
     char buffer[32];
-    sprintf_P(buffer, PSTR("G1 F%i Z%i X%i Y%i"), int(homing_feedrate[0]), 35, int(BED_CENTER_ADJUST_X), int(BED_CENTER_ADJUST_Y));
+    #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+      sprintf_P(buffer, PSTR("G1 F%i Z%i X%i Y%i"), int(homing_feedrate[0]),
+                                                    int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_Z, BED_CENTER_ADJUST_Z_M)),
+                                                    int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_X, BED_CENTER_ADJUST_X_M)),
+                                                    int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_Y, BED_CENTER_ADJUST_Y_M)));
+    #else
+      sprintf_P(buffer, PSTR("G1 F%i Z%i X%i Y%i"), int(homing_feedrate[0]), int(BED_CENTER_ADJUST_Z), int(BED_CENTER_ADJUST_X), int(BED_CENTER_ADJUST_Y));
+    #endif
     enquecommand(buffer);
 }
 
@@ -128,7 +158,13 @@ static void parkHeadForLeftAdjustment()
     char buffer[32];
     sprintf_P(buffer, PSTR("G1 F%i Z5"), int(homing_feedrate[Z_AXIS]));
     enquecommand(buffer);
-    sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(homing_feedrate[X_AXIS]), int(BED_LEFT_ADJUST_X), int(BED_LEFT_ADJUST_Y));
+    #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+      sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(homing_feedrate[X_AXIS]),
+                                                int(CHOOSE_BY_EXTRUSION_MODE(BED_LEFT_ADJUST_X, BED_LEFT_ADJUST_X_M)),
+                                                int(CHOOSE_BY_EXTRUSION_MODE(BED_LEFT_ADJUST_Y, BED_LEFT_ADJUST_Y_M)));
+    #else
+      sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(homing_feedrate[X_AXIS]), int(BED_LEFT_ADJUST_X), int(BED_LEFT_ADJUST_Y));
+    #endif
     enquecommand(buffer);
     sprintf_P(buffer, PSTR("G1 F%i Z0"), int(homing_feedrate[Z_AXIS]));
     enquecommand(buffer);
@@ -165,7 +201,15 @@ static void parkHeadForRightAdjustment()
     char buffer[32];
     sprintf_P(buffer, PSTR("G1 F%i Z5"), int(homing_feedrate[Z_AXIS]));
     enquecommand(buffer);
-    sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(homing_feedrate[X_AXIS]), int(BED_RIGHT_ADJUST_X), int(BED_RIGHT_ADJUST_Y));
+    #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+      sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(homing_feedrate[X_AXIS]),
+                                                int(CHOOSE_BY_EXTRUSION_MODE(BED_RIGHT_ADJUST_X, BED_RIGHT_ADJUST_X_M)),
+                                                int(CHOOSE_BY_EXTRUSION_MODE(BED_RIGHT_ADJUST_Y, BED_RIGHT_ADJUST_Y_M)));
+    #else
+      sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(homing_feedrate[X_AXIS]),
+                                                int(BED_RIGHT_ADJUST_X),
+                                                int(BED_RIGHT_ADJUST_Y));
+    #endif
     enquecommand(buffer);
     sprintf_P(buffer, PSTR("G1 F%i Z0"), int(homing_feedrate[Z_AXIS]));
     enquecommand(buffer);
@@ -205,7 +249,13 @@ static void parkHeadForCenterAdjustment()
     char buffer[32];
     sprintf_P(buffer, PSTR("G1 F%i Z5"), int(homing_feedrate[Z_AXIS]));
     enquecommand(buffer);
-    sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(homing_feedrate[X_AXIS]), int(BED_CENTER_ADJUST_X), int(BED_CENTER_ADJUST_Y));
+    #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+      sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(homing_feedrate[X_AXIS]),
+                                                int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_X, BED_CENTER_ADJUST_X_M)),
+                                                int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_Y, BED_CENTER_ADJUST_Y_M)));
+    #else
+      sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(homing_feedrate[X_AXIS]), int(BED_CENTER_ADJUST_X), int(BED_CENTER_ADJUST_Y));
+    #endif
     enquecommand(buffer);
     sprintf_P(buffer, PSTR("G1 F%i Z0"), int(homing_feedrate[Z_AXIS]));
     enquecommand(buffer);
@@ -287,7 +337,7 @@ static void lcd_menu_first_run_bed_level_paper_right()
 static void parkHeadForHeating()
 {
     lcd_material_reset_defaults();
-    enquecommand_P(PSTR("G1 F12000 X110 Y10"));
+    enquecommand_P(PSTR("G1 F12000 X110 Y10")); //Maybe change this!!
     enquecommand_P(PSTR("M84"));//Disable motor power.
 }
 
@@ -309,7 +359,11 @@ static void lcd_menu_first_run_material_select_1()
     {
         digipot_current(2, motor_current_setting[2]);//Set E motor power to default.
 
-        for(uint8_t e=0; e<EXTRUDERS; e++)
+        for(uint8_t e=0; e<EXTRUDERS
+          #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+            && e< extrusion_mode
+          #endif
+          ; e++)
             lcd_material_set_material(0, e);
         SET_FIRST_RUN_DONE();
 
@@ -350,7 +404,11 @@ static void lcd_menu_first_run_material_select_material()
     {
         digipot_current(2, motor_current_setting[2]);//Set E motor power to default.
 
-        for(uint8_t e=0; e<EXTRUDERS; e++)
+        for(uint8_t e=0; e<EXTRUDERS
+          #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+            && e < extrusion_mode
+          #endif
+          ; e++)
             lcd_material_set_material(SELECTED_SCROLL_MENU_ITEM(), e);
         SET_FIRST_RUN_DONE();
         lcd_change_to_menu(lcd_menu_first_run_material_select_confirm_material);
@@ -389,7 +447,11 @@ static void lcd_menu_first_run_material_load_heatup()
     if (temp < 0) temp = 0;
     if (temp > target)
     {
-        for(uint8_t e=0; e<EXTRUDERS; e++)
+        for(uint8_t e=0; e<EXTRUDERS
+          #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+            && e < extrusion_mode
+          #endif
+          ; e++)
             volume_to_filament_length[e] = 1.0;//Set the extrusion to 1mm per given value, so we can move the filament a set distance.
 
         currentMenu = lcd_menu_first_run_material_load_insert;

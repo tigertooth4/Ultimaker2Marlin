@@ -5,6 +5,10 @@
 #include "UltiLCD2.h"
 #include "ConfigurationStore.h"
 
+#ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+  uint8_t extrusion_mode;
+#endif
+
 void _EEPROM_writeData(int &pos, uint8_t* value, uint8_t size)
 {
     do
@@ -38,7 +42,7 @@ void _EEPROM_readData(int &pos, uint8_t* value, uint8_t size)
 // the default values are used whenever there is a change to the data, to prevent
 // wrong data being written to the variables.
 // ALSO:  always make sure the variables in the Store and retrieve sections are in the same order.
-#define EEPROM_VERSION "V11"
+#define EEPROM_VERSION "V12"   // changed version from "V11"
 
 #ifdef EEPROM_SETTINGS
 void Config_StoreSettings()
@@ -90,6 +94,11 @@ void Config_StoreSettings()
   #endif
   EEPROM_WRITE_VAR(i,retract_length);
   EEPROM_WRITE_VAR(i,retract_feedrate);
+  // Verifies if ultilcd2 is in using and ALTER_EXTRUSION_MODE_ON_THE_FLY has been enabled
+  #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+    EEPROM_WRITE_VAR(i,extrusion_mode);
+  #endif
+
   char ver2[4]=EEPROM_VERSION;
   i=EEPROM_OFFSET;
   EEPROM_WRITE_VAR(i,ver2); // validate data
@@ -162,6 +171,17 @@ void Config_PrintSettings()
     SERIAL_ECHOPAIR(" D" ,unscalePID_d(Kd));
     SERIAL_ECHOLN("");
 #endif
+#ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+  SERIAL_ECHO_START;
+  SERIAL_ECHOLNPGM("Extrusion mode is:");
+  SERIAL_ECHO_START;
+  if (extrusion_mode == 1)
+    SERIAL_ECHOLN("Single mode");
+  else if (extrusion_mode >1 && extrusion_mode < 4 )
+    SERIAL_ECHOLN("Multiple mode");
+  else
+    SERIAL_ECHOLN("Unknown mode");
+#endif
 }
 #endif
 
@@ -221,6 +241,10 @@ void Config_RetrieveSettings()
         #endif
         EEPROM_READ_VAR(i,retract_length);
         EEPROM_READ_VAR(i,retract_feedrate);
+        // read extrusion mode.
+        #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+          EEPROM_READ_VAR(i,extrusion_mode);
+        #endif
 
 		// Call updatePID (similar to when we have processed M301)
 		updatePID();
@@ -295,6 +319,10 @@ void Config_ResetDefault()
     #endif
     retract_length = 4.5;
     retract_feedrate = 25 * 60;
+
+    #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+      extrusion_mode = DEFAULT_EXTRUSION_MODE; // set extrusion mode to single mode
+    #endif
 
 SERIAL_ECHO_START;
 SERIAL_ECHOLNPGM("Hardcoded Default Settings Loaded");

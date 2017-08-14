@@ -167,12 +167,16 @@ float homing_feedrate[] = HOMING_FEEDRATE;
 bool axis_relative_modes[] = AXIS_RELATIVE_MODES;
 int feedmultiply=100; //100->1 200->2
 int saved_feedmultiply;
+// In ALTER_EXTRUSION_MODE_ON_THE_FLY mode, EXTRUDERS means maximum availabel extruders,
+// So no need to change the following definition.
+// The maximum number of 3 will be supported.
 int extrudemultiply[EXTRUDERS]=ARRAY_BY_EXTRUDERS(100, 100, 100); //100->1 200->2
 float current_position[NUM_AXIS] = { 0.0, 0.0, 0.0, 0.0 };
 float add_homeing[3]={0,0,0};
 float min_pos[3] = { X_MIN_POS, Y_MIN_POS, Z_MIN_POS };
 float max_pos[3] = { X_MAX_POS, Y_MAX_POS, Z_MAX_POS };
 // Extruder offset, only in XY plane
+// EXTRUDER_OFFSET_X could be an array, same for EXTRUDER_OFFSET_Y
 #if EXTRUDERS > 1
 float extruder_offset[2][EXTRUDERS] = {
 #if defined(EXTRUDER_OFFSET_X) && defined(EXTRUDER_OFFSET_Y)
@@ -219,12 +223,13 @@ bool position_error;
   bool retracted=false;
   float retract_length=4.5, retract_feedrate=25*60, retract_zlift=0.8;
 #if EXTRUDERS > 1
-  float extruder_swap_retract_length=16.0;
+  float extruder_swap_retract_length=16.0; //This might need some thoughts
 #endif
   float retract_recover_length=0, retract_recover_feedrate=25*60;
 #endif
 
 uint8_t printing_state;
+
 
 //===========================================================================
 //=============================private variables=============================
@@ -943,10 +948,16 @@ void process_commands()
         destination[Y_AXIS]=current_position[Y_AXIS];
         destination[Z_AXIS]=current_position[Z_AXIS];
         #if EXTRUDERS > 1
-        if (code_seen('S') && code_value_long() == 1)
-            destination[E_AXIS]=current_position[E_AXIS]-extruder_swap_retract_length/volume_to_filament_length[active_extruder];
-        else
-            destination[E_AXIS]=current_position[E_AXIS]-retract_length/volume_to_filament_length[active_extruder];
+          #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+            if (extrusion_mode > 1) {
+          #endif
+            if (code_seen('S') && code_value_long() == 1)
+                destination[E_AXIS]=current_position[E_AXIS]-extruder_swap_retract_length/volume_to_filament_length[active_extruder];
+            else
+                destination[E_AXIS]=current_position[E_AXIS]-retract_length/volume_to_filament_length[active_extruder];
+          #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+            }
+          #endif
         #else
         destination[E_AXIS]=current_position[E_AXIS]-retract_length/volume_to_filament_length[active_extruder];
         #endif
@@ -1772,6 +1783,9 @@ void process_commands()
     #if EXTRUDERS > 1
     case 218: // M218 - set hotend offset (in mm), T<extruder_number> X<offset_on_X> Y<offset_on_Y>
     {
+      #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+        if (extrusion_mode > 1) {
+      #endif
       if(setTargetedHotend(218)){
         break;
       }
@@ -1785,7 +1799,11 @@ void process_commands()
       }
       SERIAL_ECHO_START;
       SERIAL_ECHOPGM(MSG_HOTEND_OFFSET);
-      for(tmp_extruder = 0; tmp_extruder < EXTRUDERS; tmp_extruder++)
+      for(tmp_extruder = 0; tmp_extruder < EXTRUDERS
+        #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+          && tmp_extruder < extrusion_mode
+        #endif
+        ; tmp_extruder++)
       {
          SERIAL_ECHOPGM(" ");
          SERIAL_ECHO(extruder_offset[X_AXIS][tmp_extruder]);
@@ -1793,6 +1811,9 @@ void process_commands()
          SERIAL_ECHO(extruder_offset[Y_AXIS][tmp_extruder]);
       }
       SERIAL_ECHOLN("");
+      #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+        }
+      #endif
     }break;
     #endif
     case 220: // M220 S<factor in percent>- set speed factor override percentage
@@ -2211,7 +2232,11 @@ void process_commands()
       machinesettings_tempsave[tmp_select].feedmultiply = feedmultiply;
       machinesettings_tempsave[tmp_select].BedTemperature = target_temperature_bed;
       machinesettings_tempsave[tmp_select].fanSpeed = fanSpeed;
-      for (int i=0; i<EXTRUDERS; i++)
+      for (int i=0; i<EXTRUDERS
+        #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+          && i< extrusion_mode
+        #endif
+        ; i++)
       {
         machinesettings_tempsave[tmp_select].HotendTemperature[i] = target_temperature[i];
         machinesettings_tempsave[tmp_select].extrudemultiply[i] = extrudemultiply[i];
@@ -2247,7 +2272,11 @@ void process_commands()
         feedmultiply = machinesettings_tempsave[tmp_select].feedmultiply;
         target_temperature_bed = machinesettings_tempsave[tmp_select].BedTemperature;
         fanSpeed = machinesettings_tempsave[tmp_select].fanSpeed;
-        for (int i=0; i<EXTRUDERS; i++)
+        for (int i=0; i<EXTRUDERS
+          #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+            && i < extrusion_mode
+          #endif
+          ; i++)
         {
           target_temperature[i] = machinesettings_tempsave[tmp_select].HotendTemperature[i];
           extrudemultiply[i] = machinesettings_tempsave[tmp_select].extrudemultiply[i];
@@ -2410,7 +2439,11 @@ void process_commands()
   else if(code_seen('T'))
   {
     tmp_extruder = code_value();
-    if(tmp_extruder >= EXTRUDERS) {
+    if(tmp_extruder >= EXTRUDERS
+    #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+      || tmp_extruder >= extrusion_mode
+    #endif
+    ) {
       SERIAL_ECHO_START;
       SERIAL_ECHOPGM("T");
       SERIAL_ECHO(tmp_extruder);
@@ -2426,6 +2459,9 @@ void process_commands()
         }
       }
       #if EXTRUDERS > 1
+      #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+        if (extrusion_mode > 1) {
+      #endif
       if(tmp_extruder != active_extruder) {
         // Save current position to return to after applying extruder offset
         memcpy(destination, current_position, sizeof(destination));
@@ -2444,6 +2480,9 @@ void process_commands()
            prepare_move();
         }
       }
+      #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+        }
+      #endif
       #endif
       SERIAL_ECHO_START;
       SERIAL_ECHOPGM(MSG_ACTIVE_EXTRUDER);
@@ -2875,7 +2914,11 @@ bool setTargetedHotend(int code){
   tmp_extruder = active_extruder;
   if(code_seen('T')) {
     tmp_extruder = code_value();
-    if(tmp_extruder >= EXTRUDERS) {
+    if(tmp_extruder >= EXTRUDERS
+    #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+      || tmp_extruder >= extrusion_mode
+    #endif
+    ) {
       SERIAL_ECHO_START;
       switch(code){
         case 104:
@@ -2897,4 +2940,3 @@ bool setTargetedHotend(int code){
   }
   return false;
 }
-

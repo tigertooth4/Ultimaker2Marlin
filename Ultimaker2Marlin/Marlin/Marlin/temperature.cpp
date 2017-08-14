@@ -182,6 +182,9 @@ void PID_autotune(float temp, int extruder, int ncycles)
   #if (TEMP_BED_PIN <= -1)
        ||(extruder < 0)
   #endif
+  #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+       ||(extruder >= extrusion_mode)
+  #endif
        ){
           SERIAL_ECHOLNPGM("PID Autotune failed. Bad extruder number.");
           return;
@@ -316,10 +319,15 @@ void PID_autotune(float temp, int extruder, int ncycles)
 void updatePID()
 {
 #ifdef PIDTEMP
-  for(int e = 0; e < EXTRUDERS; e++) {
+  for(int e = 0; e < EXTRUDERS
+#ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+    && e < extrusion_mode
+#endif
+    ; e++) {
      temp_iState_max[e] = PID_INTEGRAL_DRIVE_MAX / Ki;
   }
 #endif
+
 #ifdef PIDTEMPBED
   temp_iState_max_bed = PID_INTEGRAL_DRIVE_MAX / bedKi;
 #endif
@@ -366,7 +374,11 @@ void checkExtruderAutoFans()
       fanState |= 1;
   #endif
   #if defined(EXTRUDER_1_AUTO_FAN_PIN) && EXTRUDER_1_AUTO_FAN_PIN > -1 && EXTRUDERS > 1
-    if (current_temperature[1] > EXTRUDER_AUTO_FAN_TEMPERATURE)
+    if (current_temperature[1] > EXTRUDER_AUTO_FAN_TEMPERATURE
+      #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+        && extrusion_mode > 1
+      #endif
+    )
     {
       if (EXTRUDER_1_AUTO_FAN_PIN == EXTRUDER_0_AUTO_FAN_PIN)
         fanState |= 1;
@@ -375,7 +387,11 @@ void checkExtruderAutoFans()
     }
   #endif
   #if defined(EXTRUDER_2_AUTO_FAN_PIN) && EXTRUDER_2_AUTO_FAN_PIN > -1 && EXTRUDERS > 2
-    if (current_temperature[2] > EXTRUDER_AUTO_FAN_TEMPERATURE)
+    if (current_temperature[2] > EXTRUDER_AUTO_FAN_TEMPERATURE
+    #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+      && extrusion_mode > 2
+    #endif
+    )
     {
       if (EXTRUDER_2_AUTO_FAN_PIN == EXTRUDER_0_AUTO_FAN_PIN)
         fanState |= 1;
@@ -390,15 +406,26 @@ void checkExtruderAutoFans()
   #if defined(EXTRUDER_0_AUTO_FAN_PIN) && EXTRUDER_0_AUTO_FAN_PIN > -1
     setExtruderAutoFanState(EXTRUDER_0_AUTO_FAN_PIN, (fanState & 1) != 0);
   #endif
+
+
   #if defined(EXTRUDER_1_AUTO_FAN_PIN) && EXTRUDER_1_AUTO_FAN_PIN > -1 && EXTRUDERS > 1
-    if (EXTRUDER_1_AUTO_FAN_PIN != EXTRUDER_0_AUTO_FAN_PIN)
+    if (EXTRUDER_1_AUTO_FAN_PIN != EXTRUDER_0_AUTO_FAN_PIN
+    #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+      && extrusion_mode > 1
+    #endif
+    )
       setExtruderAutoFanState(EXTRUDER_1_AUTO_FAN_PIN, (fanState & 2) != 0);
   #endif
   #if defined(EXTRUDER_2_AUTO_FAN_PIN) && EXTRUDER_2_AUTO_FAN_PIN > -1 && EXTRUDERS > 2
     if (EXTRUDER_2_AUTO_FAN_PIN != EXTRUDER_0_AUTO_FAN_PIN
-        && EXTRUDER_2_AUTO_FAN_PIN != EXTRUDER_1_AUTO_FAN_PIN)
+        && EXTRUDER_2_AUTO_FAN_PIN != EXTRUDER_1_AUTO_FAN_PIN
+      #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+        && extrusion_mode > 2
+      #endif
+      )
       setExtruderAutoFanState(EXTRUDER_2_AUTO_FAN_PIN, (fanState & 4) != 0);
   #endif
+
 }
 
 #endif // any extruder auto fan pins set
@@ -423,7 +450,11 @@ void manage_heater()
 	  min_temp_error(0);
   }
   #endif
-  for(int e = 0; e < EXTRUDERS; e++)
+  for(int e = 0; e < EXTRUDERS
+    #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+      && e < extrusion_mode
+    #endif
+    ; e++)
   {
 
   #ifdef PIDTEMP
@@ -554,10 +585,18 @@ void manage_heater()
     DDRJ |= _BV(6);
     if (current_temperature[0] > EXTRUDER_AUTO_FAN_TEMPERATURE
 #if EXTRUDERS > 1
-        || current_temperature[1] > EXTRUDER_AUTO_FAN_TEMPERATURE
+  #ifndef ALTER_EXTRUSION_MODE_ON_THE_FLY
+      || current_temperature[1] > EXTRUDER_AUTO_FAN_TEMPERATURE
+  #else
+      || (current_temperature[1] > EXTRUDER_AUTO_FAN_TEMPERATURE && extrusion_mode > 1)
+  #endif
 #endif
 #if EXTRUDERS > 2
+  #ifndef ALTER_EXTRUSION_MODE_ON_THE_FLY
         || current_temperature[2] > EXTRUDER_AUTO_FAN_TEMPERATURE
+  #else
+        || (current_temperature[2] > EXTRUDER_AUTO_FAN_TEMPERATURE && extrusion_mode > 2)
+  #endif
 #endif
         )
     {
@@ -649,9 +688,21 @@ void manage_heater()
 // For hot end temperature measurement.
 static float analog2temp(int raw, uint8_t e) {
 #ifdef TEMP_SENSOR_1_AS_REDUNDANT
-  if(e > EXTRUDERS)
+  if(
+    #ifndef ALTER_EXTRUSION_MODE_ON_THE_FLY
+      e > EXTRUDERS
+    #else
+      e > extrusion_mode
+    #endif
+  )
 #else
-  if(e >= EXTRUDERS)
+  if(
+    #ifndef ALTER_EXTRUSION_MODE_ON_THE_FLY
+      e >= EXTRUDERS
+    #else
+      e >= extrusion_mode
+    #endif
+  )
 #endif
   {
       SERIAL_ERROR_START;
@@ -730,7 +781,11 @@ static void updateTemperaturesFromRawValues()
 	current_temperature_raw[0] = read_max6675();
 #endif
 
-    for(uint8_t e=0;e<EXTRUDERS;e++)
+    for(uint8_t e=0;e<EXTRUDERS
+    #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+      && e < extrusion_mode
+    #endif
+      ;e++)
     {
         current_temperature[e] = analog2temp(current_temperature_raw[e], e);
     }
@@ -755,6 +810,7 @@ void tp_init()
 #endif
 
   // Finish init of mult extruder arrays
+  // No need to use extrusion_mode as long as real measurement is performed
   for(int e = 0; e < EXTRUDERS; e++) {
     // populate with the first value
     maxttemp[e] = maxttemp[0];
@@ -870,6 +926,9 @@ void tp_init()
   }
 #endif //MAXTEMP
 
+#ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+  if (extrusion_mode >1) {
+#endif
 #if (EXTRUDERS > 1) && defined(HEATER_1_MINTEMP)
   minttemp[1] = HEATER_1_MINTEMP;
   while(analog2temp(minttemp_raw[1], 1) < HEATER_1_MINTEMP) {
@@ -890,7 +949,13 @@ void tp_init()
 #endif
   }
 #endif //MAXTEMP 1
+#ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+  }
+#endif
 
+#ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+  if (extrusion_mode > 2) {
+#endif
 #if (EXTRUDERS > 2) && defined(HEATER_2_MINTEMP)
   minttemp[2] = HEATER_2_MINTEMP;
   while(analog2temp(minttemp_raw[2], 2) < HEATER_2_MINTEMP) {
@@ -911,6 +976,9 @@ void tp_init()
 #endif
   }
 #endif //MAXTEMP 2
+#ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+  }
+#endif
 
 #ifdef BED_MINTEMP
   /* No bed MINTEMP error implemented?!? */ /*
@@ -937,7 +1005,11 @@ void tp_init()
 void setWatch()
 {
 #ifdef WATCH_TEMP_PERIOD
-  for (int e = 0; e < EXTRUDERS; e++)
+  for (int e = 0; e < EXTRUDERS
+    #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+      && e < extrusion_mode
+    #endif
+      ; e++)
   {
     if(degHotend(e) < degTargetHotend(e) - (WATCH_TEMP_INCREASE * 2))
     {
@@ -951,31 +1023,53 @@ void setWatch()
 
 void disable_heater()
 {
-  for(int i=0;i<EXTRUDERS;i++)
+  for( int i=0; i < EXTRUDERS
+    #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+      && i < extrusion_mode
+    #endif
+    ; i++)
     setTargetHotend(0,i);
   setTargetBed(0);
-  #if defined(TEMP_0_PIN) && TEMP_0_PIN > -1
-  target_temperature[0]=0;
-  soft_pwm[0]=0;
-   #if defined(HEATER_0_PIN) && HEATER_0_PIN > -1
-     WRITE(HEATER_0_PIN,LOW);
-   #endif
+  #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+    if (extrusion_mode > 0) {
+  #endif
+    #if defined(TEMP_0_PIN) && TEMP_0_PIN > -1
+    target_temperature[0]=0;
+    soft_pwm[0]=0;
+      #if defined(HEATER_0_PIN) && HEATER_0_PIN > -1
+        WRITE(HEATER_0_PIN,LOW);
+      #endif
+    #endif
+  #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+    }
   #endif
 
-  #if defined(TEMP_1_PIN) && TEMP_1_PIN > -1 && EXTRUDERS > 1
-    target_temperature[1]=0;
-    soft_pwm[1]=0;
-    #if defined(HEATER_1_PIN) && HEATER_1_PIN > -1
-      WRITE(HEATER_1_PIN,LOW);
-    #endif
+  #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+    if (extrusion_mode > 1) {
+  #endif
+      #if defined(TEMP_1_PIN) && TEMP_1_PIN > -1 && EXTRUDERS > 1
+        target_temperature[1]=0;
+        soft_pwm[1]=0;
+        #if defined(HEATER_1_PIN) && HEATER_1_PIN > -1
+          WRITE(HEATER_1_PIN,LOW);
+        #endif
+      #endif
+  #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+    }
   #endif
 
-  #if defined(TEMP_2_PIN) && TEMP_2_PIN > -1 && EXTRUDERS > 2
-    target_temperature[2]=0;
-    soft_pwm[2]=0;
-    #if defined(HEATER_2_PIN) && HEATER_2_PIN > -1
-      WRITE(HEATER_2_PIN,LOW);
+  #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+    if (extrusion_mode > 2) {
+  #endif
+    #if defined(TEMP_2_PIN) && TEMP_2_PIN > -1 && EXTRUDERS > 2
+      target_temperature[2]=0;
+      soft_pwm[2]=0;
+      #if defined(HEATER_2_PIN) && HEATER_2_PIN > -1
+        WRITE(HEATER_2_PIN,LOW);
+      #endif
     #endif
+  #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+    }
   #endif
 
   #if defined(TEMP_BED_PIN) && TEMP_BED_PIN > -1
@@ -1115,13 +1209,27 @@ ISR(TIMER0_COMPB_vect)
     soft_pwm_0 = soft_pwm[0];
     if(soft_pwm_0 > 0) WRITE(HEATER_0_PIN,1);
     #if EXTRUDERS > 1
-    soft_pwm_1 = soft_pwm[1];
-    if(soft_pwm_1 > 0) WRITE(HEATER_1_PIN,1);
+      #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+        if (extrusion_mode > 1) {
+      #endif
+        soft_pwm_1 = soft_pwm[1];
+        if(soft_pwm_1 > 0) WRITE(HEATER_1_PIN,1);
+      #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+        }
+      #endif
     #endif
+
     #if EXTRUDERS > 2
-    soft_pwm_2 = soft_pwm[2];
-    if(soft_pwm_2 > 0) WRITE(HEATER_2_PIN,1);
+      #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+        if (extrusion_mode > 2) {
+      #endif
+        soft_pwm_2 = soft_pwm[2];
+        if(soft_pwm_2 > 0) WRITE(HEATER_2_PIN,1);
+      #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+        }
+      #endif
     #endif
+
     #if defined(HEATER_BED_PIN) && HEATER_BED_PIN > -1
     soft_pwm_b = soft_pwm_bed;
     if(soft_pwm_b > 0) WRITE(HEATER_BED_PIN,1);
@@ -1133,11 +1241,20 @@ ISR(TIMER0_COMPB_vect)
   }
   if(soft_pwm_0 <= pwm_count) WRITE(HEATER_0_PIN,0);
   #if EXTRUDERS > 1
-  if(soft_pwm_1 <= pwm_count) WRITE(HEATER_1_PIN,0);
+  if(soft_pwm_1 <= pwm_count
+    #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+      && extrusion_mode > 1
+    #endif
+  ) WRITE(HEATER_1_PIN,0);
   #endif
   #if EXTRUDERS > 2
-  if(soft_pwm_2 <= pwm_count) WRITE(HEATER_2_PIN,0);
+  if(soft_pwm_2 <= pwm_count
+    #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+      && extrusion_mode > 2
+    #endif
+  ) WRITE(HEATER_2_PIN,0);
   #endif
+
   #if defined(HEATER_BED_PIN) && HEATER_BED_PIN > -1
   if(soft_pwm_b <= pwm_count) WRITE(HEATER_BED_PIN,0);
   #endif
@@ -1171,39 +1288,63 @@ ISR(TIMER0_COMPB_vect)
         raw_temp_bed_value += ADC;
       #endif
       // Prepare TEMP_1
-      #if defined(TEMP_1_PIN) && (TEMP_1_PIN > -1) && EXTRUDERS > 1
-        #if TEMP_1_PIN > 7
-          ADCSRB = 1<<MUX5;
-        #else
-          ADCSRB = 0;
+      #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+        if (extrusion_mode > 1){
+      #endif
+        #if defined(TEMP_1_PIN) && (TEMP_1_PIN > -1) && EXTRUDERS > 1
+          #if TEMP_1_PIN > 7
+            ADCSRB = 1<<MUX5;
+          #else
+            ADCSRB = 0;
+          #endif
+          ADMUX = ((1 << REFS0) | (TEMP_1_PIN & 0x07));
+          ADCSRA |= 1<<ADSC; // Start conversion
         #endif
-        ADMUX = ((1 << REFS0) | (TEMP_1_PIN & 0x07));
-        ADCSRA |= 1<<ADSC; // Start conversion
+      #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+        }
       #endif
       lcd_buttons_update();
       temp_state = 3;
       break;
     case 3: // Measure TEMP_1
-      #if defined(TEMP_1_PIN) && (TEMP_1_PIN > -1) && EXTRUDERS > 1
-        raw_temp_1_value += ADC;
+      #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+        if (extrusion_mode > 1){
+          #endif
+        #if defined(TEMP_1_PIN) && (TEMP_1_PIN > -1) && EXTRUDERS > 1
+          raw_temp_1_value += ADC;
+        #endif
+      #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+        }
       #endif
       // Prepare TEMP_2
-      #if defined(TEMP_2_PIN) && (TEMP_2_PIN > -1) && EXTRUDERS > 2
-        #if TEMP_2_PIN > 7
-          ADCSRB = 1<<MUX5;
-        #else
-          ADCSRB = 0;
+      #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+        if (extrusion_mode > 2) {
+      #endif
+        #if defined(TEMP_2_PIN) && (TEMP_2_PIN > -1) && EXTRUDERS > 2
+          #if TEMP_2_PIN > 7
+            ADCSRB = 1<<MUX5;
+          #else
+            ADCSRB = 0;
+          #endif
+          ADMUX = ((1 << REFS0) | (TEMP_2_PIN & 0x07));
+          ADCSRA |= 1<<ADSC; // Start conversion
         #endif
-        ADMUX = ((1 << REFS0) | (TEMP_2_PIN & 0x07));
-        ADCSRA |= 1<<ADSC; // Start conversion
+      #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+        }
       #endif
       lcd_buttons_update();
       temp_state = 4;
       break;
     case 4: // Measure TEMP_2
-      #if defined(TEMP_2_PIN) && (TEMP_2_PIN > -1) && EXTRUDERS > 2
-        raw_temp_2_value += ADC;
-      #endif
+    #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+      if (extrusion_mode > 2) {
+    #endif
+        #if defined(TEMP_2_PIN) && (TEMP_2_PIN > -1) && EXTRUDERS > 2
+          raw_temp_2_value += ADC;
+        #endif
+    #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+      }
+    #endif
       temp_count++;
       //Fall trough to state 0
     case 0: // Prepare TEMP_0
@@ -1236,12 +1377,18 @@ ISR(TIMER0_COMPB_vect)
       current_temperature_raw[0] = raw_temp_0_value;
 #endif
 #if EXTRUDERS > 1
+  #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+  if (extrusion_mode > 1)
+  #endif
       current_temperature_raw[1] = raw_temp_1_value;
 #endif
 #ifdef TEMP_SENSOR_1_AS_REDUNDANT
       redundant_temperature_raw = raw_temp_1_value;
 #endif
 #if EXTRUDERS > 2
+  #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+    if (extrusion_mode > 2)
+  #endif
       current_temperature_raw[2] = raw_temp_2_value;
 #endif
       current_temperature_bed_raw = raw_temp_bed_value;
@@ -1273,6 +1420,9 @@ ISR(TIMER0_COMPB_vect)
 #endif
     }
 #if EXTRUDERS > 1
+  #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+    if (extrusion_mode >1) {
+  #endif
 #if HEATER_1_RAW_LO_TEMP > HEATER_1_RAW_HI_TEMP
     if(current_temperature_raw[1] <= maxttemp_raw[1]) {
 #else
@@ -1287,8 +1437,15 @@ ISR(TIMER0_COMPB_vect)
 #endif
         min_temp_error(1);
     }
+  #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+    }
+  #endif
 #endif
+
 #if EXTRUDERS > 2
+  #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+    if (extrusion_mode > 2) {
+  #endif
 #if HEATER_2_RAW_LO_TEMP > HEATER_2_RAW_HI_TEMP
     if(current_temperature_raw[2] <= maxttemp_raw[2]) {
 #else
@@ -1303,6 +1460,9 @@ ISR(TIMER0_COMPB_vect)
 #endif
         min_temp_error(2);
     }
+  #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+    }
+  #endif
 #endif
 
   /* No bed MINTEMP error? */
@@ -1344,5 +1504,3 @@ float unscalePID_d(float d)
 }
 
 #endif //PIDTEMP
-
-

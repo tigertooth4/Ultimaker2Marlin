@@ -10,7 +10,7 @@
 // build by the user have been successfully uploaded into firmware.
 #define STRING_VERSION_CONFIG_H __DATE__ " " __TIME__ // build date and time
 #ifndef STRING_CONFIG_H_AUTHOR
-#define STRING_CONFIG_H_AUTHOR "Version DEV" // Who made the changes.
+#define STRING_CONFIG_H_AUTHOR "HOMElab: Trident" // Who made the changes.
 #endif
 
 // SERIAL_PORT selects which serial port should be used for communication with the host.
@@ -66,6 +66,7 @@
 #ifndef EXTRUDERS
 #define EXTRUDERS 1
 #endif
+
 
 //// The following define selects which power supply you have. Please choose the one that matches your setup
 // 1 = ATX
@@ -334,7 +335,8 @@ const bool Z_ENDSTOPS_INVERTING = true; // set to true to invert the logic of th
 
 #define min_software_endstops true // If true, axis won't move to coordinates less than HOME_POS.
 #define max_software_endstops true  // If true, axis won't move to coordinates greater than the defined lengths below.
-// Travel limits after homing
+
+// Travel limits after homing, for single extrusion_mode
 #define X_MAX_POS 230
 #define X_MIN_POS 0
 #define Y_MAX_POS 224.5
@@ -345,6 +347,18 @@ const bool Z_ENDSTOPS_INVERTING = true; // set to true to invert the logic of th
 #define X_MAX_LENGTH (X_MAX_POS - X_MIN_POS)
 #define Y_MAX_LENGTH (Y_MAX_POS - Y_MIN_POS)
 #define Z_MAX_LENGTH (Z_MAX_POS - Z_MIN_POS)
+
+// Travel limits for multiple extrusion_mode
+#define X_MAX_POS_M 230  //need to adjust these numbers
+#define X_MIN_POS_M 0
+#define Y_MAX_POS_M 224.5
+#define Y_MIN_POS_M 0
+#define Z_MAX_POS_M 230
+#define Z_MIN_POS_M 0
+
+#define X_MAX_LENGTH_M (X_MAX_POS_M - X_MIN_POS_M)
+#define Y_MAX_LENGTH_M (Y_MAX_POS_M - Y_MIN_POS_M)
+#define Z_MAX_LENGTH_M (Z_MAX_POS_M - Z_MIN_POS_M)
 
 // The position of the homing switches
 //#define MANUAL_HOME_POSITIONS  // If defined, MANUAL_*_HOME_POS below will be used
@@ -418,6 +432,18 @@ const bool Z_ENDSTOPS_INVERTING = true; // set to true to invert the logic of th
 //#define ULTIBOARD_V2_CONTROLLER //128x64 pixel Ultimaker OLED LCD panel
 #define ENABLE_ULTILCD2 //128x64 pixel display in the Ultimaker 2, with new menus. Note: For compiling with Arduino you need to remove the "SIGNAL(TWI_vect)" function from "libraries/Wire/utility/twi.c"
 //#define ULTIPANEL  //the ultipanel as on thingiverse
+// Uncomment to enable change Extruder numbers on the LCD menu
+
+#ifdef ENABLE_ULTILCD2
+#define ALTER_EXTRUSION_MODE_ON_THE_FLY
+#define DEFAULT_EXTRUSION_MODE 1 // current used number of extruders; 1 for single extrusion; n for multiple (n) extrusion (1<n<=4).
+  #ifdef EXTRUDERS
+    #undef EXTRUDERS
+    #define EXTRUDERS 2 //Maximum possible number of extruders in the setup; So always larger than extrusion_mode variables.
+  #endif
+#endif
+
+
 
 // The RepRapDiscount Smart Controller (white PCB)
 // http://reprap.org/wiki/RepRapDiscount_Smart_Controller

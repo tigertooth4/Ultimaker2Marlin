@@ -24,7 +24,8 @@ uint8_t led_mode = LED_MODE_ALWAYS_ON;
 float dsp_temperature[EXTRUDERS] = { 20.0 };
 float dsp_temperature_bed = 20.0;
 
-//#define SPECIAL_STARTUP
+
+#define SPECIAL_STARTUP
 
 static void lcd_menu_startup();
 #ifdef SPECIAL_STARTUP
@@ -39,7 +40,11 @@ void lcd_init()
     if (!lcd_material_verify_material_settings())
     {
         lcd_material_reset_defaults();
-        for(uint8_t e=0; e<EXTRUDERS; e++)
+        for(uint8_t e=0; e<EXTRUDERS
+          #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+            && e < extrusion_mode
+          #endif
+          ; e++)
             lcd_material_set_material(0, e);
     }
     lcd_material_read_current_material();
@@ -127,7 +132,11 @@ void lcd_update()
     }else{
         serialScreenShown = false;
         // refresh the displayed temperatures
-        for(uint8_t e=0;e<EXTRUDERS;e++)
+        for(uint8_t e=0;e<EXTRUDERS
+          #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+            && e < extrusion_mode
+          #endif
+          ;e++)
         {
             dsp_temperature[e] = (ALPHA * current_temperature[e]) + (ONE_MINUS_ALPHA * dsp_temperature[e]);
         }
@@ -209,19 +218,24 @@ static void lcd_menu_special_startup()
 
     if (lcd_lib_button_pressed)
     {
-        if (!IS_FIRST_RUN_DONE())
-        {
-            lcd_change_to_menu(lcd_menu_first_run_init);
-        }else{
+        // always ignore the first run calibration
+        //if (!IS_FIRST_RUN_DONE())
+        //{
             lcd_change_to_menu(lcd_menu_main);
-        }
+        //}else{
+        //    lcd_change_to_menu(lcd_menu_main);
+        //}
     }
 }
 #endif//SPECIAL_STARTUP
 
 void doCooldown()
 {
-    for(uint8_t n=0; n<EXTRUDERS; n++)
+    for(uint8_t n=0; n<EXTRUDERS
+      #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+        && n < extrusion_mode
+      #endif
+      ; n++)
         setTargetHotend(0, n);
     setTargetBed(0);
     fanSpeed = 0;

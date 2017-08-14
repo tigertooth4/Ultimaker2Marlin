@@ -54,28 +54,60 @@ static void cancelMaterialInsert()
 
 void lcd_menu_material()
 {
-#if EXTRUDERS > 1
-    lcd_tripple_menu(PSTR("PRIMARY|NOZZLE"), PSTR("SECONDARY|NOZZLE"), PSTR("RETURN"));
+#ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
 
-    if (lcd_lib_button_pressed)
+    //#if EXTRUDERS > 1
+    if(extrusion_mode > 1)
     {
-        if (IS_SELECTED_MAIN(0))
-        {
-            active_extruder = 0;
-            lcd_change_to_menu(lcd_menu_material_main);
-        }
-        else if (IS_SELECTED_MAIN(1))
-        {
-            active_extruder = 1;
-            lcd_change_to_menu(lcd_menu_material_main);
-        }
-        else if (IS_SELECTED_MAIN(2))
-            lcd_change_to_menu(lcd_menu_main);
-    }
+        lcd_tripple_menu(PSTR("PRIMARY|NOZZLE"), PSTR("SECONDARY|NOZZLE"), PSTR("RETURN"));
 
-    lcd_lib_update_screen();
+        if (lcd_lib_button_pressed)
+        {
+            if (IS_SELECTED_MAIN(0))
+            {
+                active_extruder = 0;
+                lcd_change_to_menu(lcd_menu_material_main);
+            }
+            else if (IS_SELECTED_MAIN(1))
+            {
+                active_extruder = 1;
+                lcd_change_to_menu(lcd_menu_material_main);
+            }
+            else if (IS_SELECTED_MAIN(2))
+                lcd_change_to_menu(lcd_menu_main);
+        }
+
+        lcd_lib_update_screen();
+    }
+    else //#else
+        currentMenu = lcd_menu_material_main;
+    //#endif
+
 #else
-    currentMenu = lcd_menu_material_main;
+    #if EXTRUDERS > 1
+        lcd_tripple_menu(PSTR("PRIMARY|NOZZLE"), PSTR("SECONDARY|NOZZLE"), PSTR("RETURN"));
+
+        if (lcd_lib_button_pressed)
+        {
+            if (IS_SELECTED_MAIN(0))
+            {
+                active_extruder = 0;
+                lcd_change_to_menu(lcd_menu_material_main);
+            }
+            else if (IS_SELECTED_MAIN(1))
+            {
+                active_extruder = 1;
+                lcd_change_to_menu(lcd_menu_material_main);
+            }
+            else if (IS_SELECTED_MAIN(2))
+                lcd_change_to_menu(lcd_menu_main);
+        }
+
+        lcd_lib_update_screen();
+    #else
+        currentMenu = lcd_menu_material_main;
+    #endif
+
 #endif
 }
 
@@ -665,12 +697,22 @@ static void lcd_menu_material_selected()
     lcd_info_screen(post_change_material_menu, NULL, PSTR("OK"));
     lcd_lib_draw_string_centerP(20, PSTR("Selected material:"));
     lcd_lib_draw_string_center(30, card.longFilename);
-#if EXTRUDERS > 1
-    if (active_extruder == 0)
-        lcd_lib_draw_string_centerP(40, PSTR("for primary nozzle"));
-    else if (active_extruder == 1)
-        lcd_lib_draw_string_centerP(40, PSTR("for secondary nozzle"));
-#endif
+    #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+        if (extrusion_mode > 1)
+        {
+            if (active_extruder == 0)
+                lcd_lib_draw_string_centerP(40, PSTR("for primary nozzle"));
+            else if (active_extruder == 1)
+                lcd_lib_draw_string_centerP(40, PSTR("for secondary nozzle"));
+        }
+    #else // Not ALTER_EXTRUSION_MODE_ON_THE_FLY
+        #if EXTRUDERS > 1
+            if (active_extruder == 0)
+                lcd_lib_draw_string_centerP(40, PSTR("for primary nozzle"));
+            else if (active_extruder == 1)
+                lcd_lib_draw_string_centerP(40, PSTR("for secondary nozzle"));
+        #endif
+    #endif
     lcd_lib_update_screen();
 }
 
@@ -909,7 +951,11 @@ void lcd_material_store_material(uint8_t nr)
 
 void lcd_material_read_current_material()
 {
+  #ifndef ALTER_EXTRUSION_MODE_ON_THE_FLY
     for(uint8_t e=0; e<EXTRUDERS; e++)
+  #else // Defined ALTER_EXTRUSION_MODE_ON_THE_FLY
+    for(uint8_t e=0; e< extrusion_mode; e++)
+  #endif
     {
         material[e].temperature = eeprom_read_word(EEPROM_MATERIAL_TEMPERATURE_OFFSET(EEPROM_MATERIAL_SETTINGS_MAX_COUNT+e));
 #if TEMP_SENSOR_BED != 0
@@ -929,7 +975,11 @@ void lcd_material_read_current_material()
 
 void lcd_material_store_current_material()
 {
+  #ifndef ALTER_EXTRUSION_MODE_ON_THE_FLY
     for(uint8_t e=0; e<EXTRUDERS; e++)
+  #else // Defined ALTER_EXTRUSION_MODE_ON_THE_FLY
+    for(uint8_t e=0; e< extrusion_mode; e++)
+  #endif
     {
         eeprom_write_word(EEPROM_MATERIAL_TEMPERATURE_OFFSET(EEPROM_MATERIAL_SETTINGS_MAX_COUNT+e), material[e].temperature);
 #if TEMP_SENSOR_BED != 0

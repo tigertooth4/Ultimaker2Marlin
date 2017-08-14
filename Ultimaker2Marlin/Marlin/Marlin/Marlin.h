@@ -248,4 +248,10 @@ extern uint8_t active_extruder;
   # define ARRAY_BY_EXTRUDERS(v1, v2, v3) { v1 }
 #endif
 
+#ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+  extern uint8_t extrusion_mode;
+
+  #define CHOOSE_BY_EXTRUSION_MODE(single_mode_value,multiple_mode_value) (extrusion_mode<2) ? single_mode_value : multiple_mode_value 
+#endif
+
 #endif

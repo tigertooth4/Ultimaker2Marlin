@@ -114,10 +114,21 @@ extern uint8_t led_glow_dir;
 #define LED_GLOW_ERROR() lcd_lib_led_color(led_glow,128-led_glow,led_glow);
 
 //If we have a heated bed, then the heated bed menu entries have a size of 1, else they have a size of 0.
-#if TEMP_SENSOR_BED != 0
-#define BED_MENU_OFFSET 1
-#else
-#define BED_MENU_OFFSET 0
-#endif
+//#ifndef ALTER_EXTRUSION_MODE_ON_THE_FLY
+    #if TEMP_SENSOR_BED != 0
+        #define BED_MENU_OFFSET 1
+    #else
+        #define BED_MENU_OFFSET 0
+    #endif
+//#else // defined ALTER_EXTRUSION_MODE_ON_THE_FLY, we have buildplate leveling behind, so make BED_MENU_OFFSET + 1
+//    #if TEMP_SENSOR_BED != 0
+//        #define BED_MENU_OFFSET 2
+//    #else
+//        #define BED_MENU_OFFSET 1
+//    #endif
+//#endif
+
+
+
 
 #endif//ULTI_LCD2_HI_LIB_H

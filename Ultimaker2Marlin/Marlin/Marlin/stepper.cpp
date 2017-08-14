@@ -662,6 +662,9 @@ ISR(TIMER1_COMPA_vect)
         }
       }
  #if EXTRUDERS > 1
+  #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+    if (extrusion_mode > 1) {
+  #endif
       if (e_steps[1] != 0) {
         WRITE(E1_STEP_PIN, INVERT_E_STEP_PIN);
         if (e_steps[1] < 0) {
@@ -675,8 +678,15 @@ ISR(TIMER1_COMPA_vect)
           WRITE(E1_STEP_PIN, !INVERT_E_STEP_PIN);
         }
       }
+  #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+    }
+  #endif
  #endif
+
  #if EXTRUDERS > 2
+  #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+    if (extrusion_mode > 2) {
+  #endif
       if (e_steps[2] != 0) {
         WRITE(E2_STEP_PIN, INVERT_E_STEP_PIN);
         if (e_steps[2] < 0) {
@@ -690,7 +700,10 @@ ISR(TIMER1_COMPA_vect)
           WRITE(E2_STEP_PIN, !INVERT_E_STEP_PIN);
         }
       }
- #endif
+  #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+    }
+  #endif
+ #endif  // EXTRUDERS > 2
     }
   }
 #endif // ADVANCE
@@ -1048,4 +1061,3 @@ void microstep_readings()
       SERIAL_PROTOCOL(   digitalRead(E1_MS1_PIN));
       SERIAL_PROTOCOLLN( digitalRead(E1_MS2_PIN));
 }
-
