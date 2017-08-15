@@ -790,10 +790,10 @@ static void lcd_menu_maintenance_led()
     }
 }
 
+
+
+
 #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
-
-
-
 
 static char* lcd_extru_system_item(uint8_t nr)
 {
@@ -805,6 +805,7 @@ static char* lcd_extru_system_item(uint8_t nr)
       strcpy_P(card.longFilename, PSTR("  Single extru-mode"));
   else if (nr == 2)
       strcpy_P(card.longFilename, PSTR("  Double extru-mode"));
+#if (EXTRUDERS > 2)
   else if (nr == 3)
       strcpy_P(card.longFilename, PSTR("  Triple extru-mode"));
   else if (nr == 4)
@@ -813,15 +814,47 @@ static char* lcd_extru_system_item(uint8_t nr)
       strcpy_P(card.longFilename, PSTR("???"));
   if (nr  == temp_extrusion_mode && nr < 4)
       card.longFilename[0] = '>';
+#else // EXTUDERS <3
+  else if (nr == 3)
+      strcpy_P(card.longFilename, PSTR("  Confirm and halt >"));
+  else
+      strcpy_P(card.longFilename, PSTR("???"));
+  if (nr  == temp_extrusion_mode && nr < 3)
+      card.longFilename[0] = '>';
+#endif
   return card.longFilename;
 }
 
 static void lcd_extru_system_details(uint8_t nr)
 {
-    char buffer[16];
-    if(nr == 4)
+    char buffer[24];
+#if (EXTRUDERS > 2)
+    if (nr == 4)
+#else
+    if (nr == 3)
+#endif
     {
-        int_to_string(temp_extrusion_mode, buffer, PSTR(": will be"));
+        if (temp_extrusion_mode == 1)
+        {
+          if (temp_extrusion_mode == extrusion_mode)
+            strcpy_P(buffer, PSTR("Already in Single mode!"));
+          else
+            strcpy_P(buffer, PSTR("Confirm Single mode?"));
+        }
+        else if (temp_extrusion_mode == 2)
+        {
+          if (temp_extrusion_mode == extrusion_mode)
+            strcpy_P(buffer, PSTR("Already in Dual mode!"));
+          else
+            strcpy_P(buffer, PSTR("Confirm Dual mode?"));
+        }
+        else if (temp_extrusion_mode == 3)
+        {
+          if (temp_extrusion_mode == extrusion_mode)
+            strcpy_P(buffer, PSTR("Already in Triple mode!"));
+          else
+            strcpy_P(buffer, PSTR("Confirm Triple mode?"));
+        }
         lcd_lib_draw_string(5, 53, buffer);
     }
 }
@@ -829,16 +862,20 @@ static void lcd_extru_system_details(uint8_t nr)
 
 static void lcd_menu_maintenance_extru_system()
 {
+  #if (EXTRUDERS > 2)
     lcd_scroll_menu(PSTR("EXTRU-SYSTEM"), 5, lcd_extru_system_item , lcd_extru_system_details);
     if (lcd_lib_button_pressed)
     {
         if (IS_SELECTED_SCROLL(4))
         {
-            //if (led_mode != LED_MODE_ALWAYS_ON)
-            //    analogWrite(LED_PIN, 0);
-            extrusion_mode = temp_extrusion_mode;
-            Config_StoreSettings();
-            lcd_change_to_menu(lcd_menu_maintenance_extru_system_halt_for_user_action);//, NULL);//SCROLL_MENU_ITEM_POS(1));
+            if (extrusion_mode != temp_extrusion_mode)
+            { //otherwise do nothing
+              extrusion_mode = temp_extrusion_mode;
+              Config_StoreSettings();
+              lcd_change_to_menu(lcd_menu_maintenance_extru_system_halt_for_user_action);
+            }
+            else
+              lcd_lib_beep();
         }
         else if (IS_SELECTED_SCROLL(1))
         {
@@ -863,6 +900,42 @@ static void lcd_menu_maintenance_extru_system()
             lcd_change_to_menu(lcd_menu_maintenance, SCROLL_MENU_ITEM_POS(1));
         }
     }
+  #else //EXTRUDERS < 3
+      lcd_scroll_menu(PSTR("EXTRU-SYSTEM"), 4, lcd_extru_system_item , lcd_extru_system_details);
+      if (lcd_lib_button_pressed)
+      {
+          if (IS_SELECTED_SCROLL(3))
+          {
+            if (extrusion_mode != temp_extrusion_mode)
+            { //otherwise do nothing
+              extrusion_mode = temp_extrusion_mode;
+              Config_StoreSettings();
+              lcd_change_to_menu(lcd_menu_maintenance_extru_system_halt_for_user_action);
+            }
+            else
+              lcd_lib_beep();
+          }
+          else if (IS_SELECTED_SCROLL(1))
+          {
+              temp_extrusion_mode = 1;
+              lcd_lib_beep();
+              //lcd_lib_update_screen();
+          }
+          else if (IS_SELECTED_SCROLL(2))
+          {
+              temp_extrusion_mode = 2;
+              lcd_lib_beep();
+              //lcd_lib_update_screen();
+          }
+          else if (IS_SELECTED_SCROLL(0))
+          {
+              lcd_change_to_menu(lcd_menu_maintenance, SCROLL_MENU_ITEM_POS(1));
+          }
+      }
+  #endif
+
+
+
 }
 
 static void lcd_menu_maintenance_extru_system_halt_for_user_action()
