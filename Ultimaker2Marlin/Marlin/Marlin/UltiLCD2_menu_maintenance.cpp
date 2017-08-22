@@ -359,9 +359,12 @@ static void lcd_menu_maintenance_advanced()
                       if (IS_SELECTED_SCROLL(0))
                           lcd_change_to_menu(lcd_menu_maintenance);
                       else if (IS_SELECTED_SCROLL(1))
-                          lcd_change_to_menu(lcd_menu_maintenance_led, 0);
+                      {
+                          SET_FIRST_RUN_DONE();
+                          lcd_change_to_menu(lcd_menu_first_run_start_bed_leveling);
+                      }
                       else if (IS_SELECTED_SCROLL(2))
-                          lcd_change_to_menu(lcd_menu_first_run_start_bed_leveling, 0);
+                          lcd_change_to_menu(lcd_menu_maintenance_led, 0);
                       else if (IS_SELECTED_SCROLL(3))
                       {
                           active_extruder = 0;
