@@ -26,9 +26,9 @@
 #define BED_CENTER_ADJUST_X_M (X_MAX_POS_M/2)
 #define BED_CENTER_ADJUST_Y_M (Y_MAX_LENGTH_M - 10)
 #define BED_CENTER_ADJUST_Z_M 55 // needs to be more for big tool head
-#define BED_LEFT_ADJUST_X_M 10
+#define BED_LEFT_ADJUST_X_M 20
 #define BED_LEFT_ADJUST_Y_M 20
-#define BED_RIGHT_ADJUST_X_M (X_MAX_POS_M - 10)
+#define BED_RIGHT_ADJUST_X_M (X_MAX_POS_M - 20)
 #define BED_RIGHT_ADJUST_Y_M 20
 
 static void lcd_menu_first_run_init_2();
@@ -67,7 +67,7 @@ void lcd_menu_first_run_init()
     DRAW_PROGRESS_NR_IF_NOT_DONE(1);
     lcd_lib_draw_string_centerP(10, PSTR("Welcome to the first"));
     lcd_lib_draw_string_centerP(20, PSTR("startup of your"));
-    lcd_lib_draw_string_centerP(30, PSTR("Ultimaker! Press the"));
+    lcd_lib_draw_string_centerP(30, PSTR("DinkyPro! Press the"));
     lcd_lib_draw_string_centerP(40, PSTR("button to continue"));
     lcd_lib_update_screen();
 }
@@ -376,7 +376,7 @@ static void lcd_menu_first_run_material_select_1()
     lcd_lib_draw_string_centerP(10, PSTR("Next, select the"));
     lcd_lib_draw_string_centerP(20, PSTR("material you will"));
     lcd_lib_draw_string_centerP(30, PSTR("insert in this"));
-    lcd_lib_draw_string_centerP(40, PSTR("Ultimaker2."));
+    lcd_lib_draw_string_centerP(40, PSTR("DinkyPro."));
     lcd_lib_update_screen();
 }
 
@@ -432,7 +432,7 @@ static void lcd_menu_first_run_material_select_2()
     SELECT_MAIN_MENU_ITEM(0);
     lcd_info_screen(lcd_menu_first_run_material_load_heatup, NULL, PSTR("CONTINUE"));
     DRAW_PROGRESS_NR(15);
-    lcd_lib_draw_string_centerP(10, PSTR("Now your Ultimaker2"));
+    lcd_lib_draw_string_centerP(10, PSTR("Now your DinkyPro"));
     lcd_lib_draw_string_centerP(20, PSTR("knows what kind"));
     lcd_lib_draw_string_centerP(30, PSTR("of material"));
     lcd_lib_draw_string_centerP(40, PSTR("it is using."));
@@ -573,7 +573,7 @@ static void lcd_menu_first_run_print_card_detect()
         DRAW_PROGRESS_NR(21);
         lcd_lib_draw_string_centerP(20, PSTR("Please insert SD-card"));
         lcd_lib_draw_string_centerP(30, PSTR("that came with"));
-        lcd_lib_draw_string_centerP(40, PSTR("your Ultimaker2..."));
+        lcd_lib_draw_string_centerP(40, PSTR("your DinkyPro..."));
         lcd_lib_update_screen();
         card.release();
         return;
