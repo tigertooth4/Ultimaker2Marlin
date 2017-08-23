@@ -13,6 +13,9 @@
 #include "UltiLCD2_menu_maintenance.h"
 
 #define HEATUP_POSITION_COMMAND "G1 F12000 X5 Y10"
+#ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+  #define HEATUP_POSITION_COMMAND_M "G1 F12000 X30 Y25"
+#endif
 
 uint8_t lcd_cache[LCD_CACHE_SIZE];
 #define LCD_CACHE_NR_OF_FILES() lcd_cache[(LCD_CACHE_COUNT*(LONG_FILENAME_LENGTH+2))]
@@ -461,7 +464,14 @@ void lcd_menu_print_select()
                         }
 
                         enquecommand_P(PSTR("G28"));
-                        enquecommand_P(PSTR(HEATUP_POSITION_COMMAND));
+                        #ifndef ALTER_EXTRUSION_MODE_ON_THE_FLY
+                          enquecommand_P(PSTR(HEATUP_POSITION_COMMAND));
+                        #else
+                          if (extrusion_mode < 2)
+                            enquecommand_P(PSTR(HEATUP_POSITION_COMMAND));
+                          else //extrusion_mode > 1
+                            enquecommand_P(PSTR(HEATUP_POSITION_COMMAND_M));
+                        #endif
                         lcd_change_to_menu(lcd_menu_print_heatup);
                     }else{
                         //Classic gcode file
@@ -1141,7 +1151,14 @@ static void lcd_menu_print_pause()
             }
 
             char buffer[32];
-            sprintf_P(buffer, PSTR("M601 X5 Y5 Z%i L%i"), int(zdiff), int(END_OF_PRINT_RETRACTION));
+            #ifndef ALTER_EXTRUSION_MODE_ON_THE_FLY
+              sprintf_P(buffer, PSTR("M601 X5 Y5 Z%i L%i"), int(zdiff), int(END_OF_PRINT_RETRACTION));
+            #else
+              if (extrusion_mode < 2)
+                sprintf_P(buffer, PSTR("M601 X5 Y5 Z%i L%i"), int(zdiff), int(END_OF_PRINT_RETRACTION));
+              else // extrusion_mode > 1
+                sprintf_P(buffer, PSTR("M601 X30 Y25 Z%i L%i"), int(zdiff), int(END_OF_PRINT_RETRACTION));
+            #endif
             enquecommand(buffer);
 
             primed = false;

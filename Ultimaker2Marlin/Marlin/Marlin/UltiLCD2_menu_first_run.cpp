@@ -26,10 +26,10 @@
 #define BED_CENTER_ADJUST_X_M (X_MAX_POS_M/2)
 #define BED_CENTER_ADJUST_Y_M (Y_MAX_LENGTH_M - 10)
 #define BED_CENTER_ADJUST_Z_M 55 // needs to be more for big tool head
-#define BED_LEFT_ADJUST_X_M 20
-#define BED_LEFT_ADJUST_Y_M 20
+#define BED_LEFT_ADJUST_X_M 30
+#define BED_LEFT_ADJUST_Y_M 25
 #define BED_RIGHT_ADJUST_X_M (X_MAX_POS_M - 20)
-#define BED_RIGHT_ADJUST_Y_M 20
+#define BED_RIGHT_ADJUST_Y_M 25
 
 static void lcd_menu_first_run_init_2();
 static void lcd_menu_first_run_init_3();
