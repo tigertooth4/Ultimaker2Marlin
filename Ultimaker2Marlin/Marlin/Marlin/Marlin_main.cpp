@@ -1101,14 +1101,27 @@ void process_commands()
       }
       #endif
 
-      if((home_all_axis) || (code_seen(axis_codes[X_AXIS])))
-      {
-        HOMEAXIS(X);
-      }
+      #ifdef HOME_Y_BEFORE_X
 
-      if((home_all_axis) || (code_seen(axis_codes[Y_AXIS]))) {
-        HOMEAXIS(Y);
-      }
+          if((home_all_axis) || (code_seen(axis_codes[Y_AXIS]))) {
+            HOMEAXIS(Y);
+          }
+
+          if((home_all_axis) || (code_seen(axis_codes[X_AXIS])))
+          {
+            HOMEAXIS(X);
+          }
+
+      #else
+          if((home_all_axis) || (code_seen(axis_codes[X_AXIS])))
+          {
+            HOMEAXIS(X);
+          }
+
+          if((home_all_axis) || (code_seen(axis_codes[Y_AXIS]))) {
+            HOMEAXIS(Y);
+          }
+      #endif
 
       #if Z_HOME_DIR < 0                      // If homing towards BED do Z last
       if((home_all_axis) || (code_seen(axis_codes[Z_AXIS]))) {

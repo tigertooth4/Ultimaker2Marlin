@@ -156,7 +156,8 @@
 #define X_HOME_RETRACT_MM 7
 #define Y_HOME_RETRACT_MM 7
 #define Z_HOME_RETRACT_MM 7
-#define QUICK_HOME  //if this is defined, if both x and y are to be homed, a diagonal move will be performed initially.
+//#define QUICK_HOME  //if this is defined, if both x and y are to be homed, a diagonal move will be performed initially.
+#define HOME_Y_BEFORE_X 
 
 #define AXIS_RELATIVE_MODES {false, false, false, false}
 
