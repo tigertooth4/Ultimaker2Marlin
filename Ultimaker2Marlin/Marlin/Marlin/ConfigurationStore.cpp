@@ -7,6 +7,14 @@
 
 #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
   uint8_t extrusion_mode;
+
+  #if EXTRUDERS > 1
+  float other_extruder_offset[3][EXTRUDERS-1] = {
+    ARRAY_BY_OTHER_EXTRUDERS( 0.0, 0.0 ),  // x - offset in mm
+    ARRAY_BY_OTHER_EXTRUDERS( 0.0, 0.0 ),  // y - offset in mm
+    ARRAY_BY_OTHER_EXTRUDERS( 0.0, 0.0 )   // z - offset in mm
+  };
+  #endif
 #endif
 
 void _EEPROM_writeData(int &pos, uint8_t* value, uint8_t size)
@@ -42,7 +50,7 @@ void _EEPROM_readData(int &pos, uint8_t* value, uint8_t size)
 // the default values are used whenever there is a change to the data, to prevent
 // wrong data being written to the variables.
 // ALSO:  always make sure the variables in the Store and retrieve sections are in the same order.
-#define EEPROM_VERSION "V12"   // changed version from "V11"
+#define EEPROM_VERSION "V13"  //changed from "V12" // changed version from "V11"
 
 #ifdef EEPROM_SETTINGS
 void Config_StoreSettings()
@@ -96,7 +104,13 @@ void Config_StoreSettings()
   EEPROM_WRITE_VAR(i,retract_feedrate);
   // Verifies if ultilcd2 is in using and ALTER_EXTRUSION_MODE_ON_THE_FLY has been enabled
   #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
-    EEPROM_WRITE_VAR(i,extrusion_mode);
+      EEPROM_WRITE_VAR(i,extrusion_mode);
+
+    #if EXTRUDERS > 1
+      EEPROM_WRITE_VAR( i, other_extruder_offset[0]);
+      EEPROM_WRITE_VAR( i, other_extruder_offset[1]);
+      EEPROM_WRITE_VAR( i, other_extruder_offset[2]);
+    #endif
   #endif
 
   char ver2[4]=EEPROM_VERSION;
@@ -181,6 +195,26 @@ void Config_PrintSettings()
     SERIAL_ECHOLN("Multiple mode");
   else
     SERIAL_ECHOLN("Unknown mode");
+
+  #if EXTRUDERS > 1
+
+    if (extrusion_mode >= 2)
+    {
+        SERIAL_ECHO_START;
+        SERIAL_ECHOLNPGM(" Toolheads offset (mm):");
+        SERIAL_ECHOPAIR(" Tool2 X ", other_extruder_offset[0][0]);
+        SERIAL_ECHOPAIR(" Y ", other_extruder_offset[1][0]);
+        SERIAL_ECHOPAIR(" Z ", other_extruder_offset[2][0]);
+    }
+    if (extrusion_mode >= 3)
+    {
+        SERIAL_ECHO_START;
+        SERIAL_ECHOLNPGM(" Toolheads offset (mm):");
+        SERIAL_ECHOPAIR(" Tool3 X ", other_extruder_offset[0][1]);
+        SERIAL_ECHOPAIR(" Y ", other_extruder_offset[1][1]);
+        SERIAL_ECHOPAIR(" Z ", other_extruder_offset[2][1]);
+    }
+  #endif
 #endif
 }
 #endif
@@ -243,7 +277,10 @@ void Config_RetrieveSettings()
         EEPROM_READ_VAR(i,retract_feedrate);
         // read extrusion mode.
         #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
-          EEPROM_READ_VAR(i,extrusion_mode);
+          EEPROM_READ_VAR(i, extrusion_mode);
+          EEPROM_READ_VAR(i, other_extruder_offset[0]);
+          EEPROM_READ_VAR(i, other_extruder_offset[1]);
+          EEPROM_READ_VAR(i, other_extruder_offset[2]);
         #endif
 
 		// Call updatePID (similar to when we have processed M301)
@@ -322,7 +359,10 @@ void Config_ResetDefault()
 
     #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
       extrusion_mode = DEFAULT_EXTRUSION_MODE; // set extrusion mode to single mode
-    #endif
+      for(int i=0; i<3; i++)
+        for(int j=0; j< EXTRUDERS; j++)
+          other_extruder_offset[i][j] = 0.0f;
+      #endif
 
 SERIAL_ECHO_START;
 SERIAL_ECHOLNPGM("Hardcoded Default Settings Loaded");

@@ -58,13 +58,14 @@
 
 //Implemented Codes
 //-------------------
-// G0  -> G1
+// G0  - G1
 // G1  - Coordinated Movement X Y Z E
 // G2  - CW ARC
 // G3  - CCW ARC
 // G4  - Dwell S<seconds> or P<milliseconds>
 // G10 - retract filament according to settings of M207
 // G11 - retract recover filament according to settings of M208
+// G25 -
 // G28 - Home all Axis
 // G90 - Use Absolute Coordinates
 // G91 - Use Relative Coordinates
@@ -177,13 +178,16 @@ float min_pos[3] = { X_MIN_POS, Y_MIN_POS, Z_MIN_POS };
 float max_pos[3] = { X_MAX_POS, Y_MAX_POS, Z_MAX_POS };
 // Extruder offset, only in XY plane
 // EXTRUDER_OFFSET_X could be an array, same for EXTRUDER_OFFSET_Y
-#if EXTRUDERS > 1
-float extruder_offset[2][EXTRUDERS] = {
-#if defined(EXTRUDER_OFFSET_X) && defined(EXTRUDER_OFFSET_Y)
-  EXTRUDER_OFFSET_X, EXTRUDER_OFFSET_Y
+#ifndef ALTER_EXTRUSION_MODE_ON_THE_FLY
+      #if EXTRUDERS > 1
+      float extruder_offset[3][EXTRUDERS] = {
+      #if defined(EXTRUDER_OFFSET_X) && defined(EXTRUDER_OFFSET_Y)
+        EXTRUDER_OFFSET_X, EXTRUDER_OFFSET_Y
+      #endif
+      };
+      #endif
 #endif
-};
-#endif
+
 uint8_t active_extruder = 0;
 uint8_t fanSpeed=0;
 uint8_t fanSpeedPercent=100;
@@ -191,10 +195,10 @@ uint8_t fanSpeedPercent=100;
 struct machinesettings {
   machinesettings() : has_saved_settings(0) {}
   int feedmultiply;
-  int HotendTemperature[EXTRUDERS];
+  int HotendTemperature[EXTRUDERS]; //good
   int BedTemperature;
   uint8_t fanSpeed;
-  int extrudemultiply[EXTRUDERS];
+  int extrudemultiply[EXTRUDERS];  // good
   long max_acceleration_units_per_sq_second[NUM_AXIS];
   float max_feedrate[NUM_AXIS];
   float acceleration;
@@ -223,7 +227,7 @@ bool position_error;
   bool retracted=false;
   float retract_length=4.5, retract_feedrate=25*60, retract_zlift=0.8;
 #if EXTRUDERS > 1
-  float extruder_swap_retract_length=16.0; //This might need some thoughts
+  float extruder_swap_retract_length=4.5; //16.0; //This might need some thoughts
 #endif
   float retract_recover_length=0, retract_recover_feedrate=25*60;
 #endif
@@ -1793,41 +1797,79 @@ void process_commands()
 
     }break;
     #endif // FWRETRACT
-    #if EXTRUDERS > 1
-    case 218: // M218 - set hotend offset (in mm), T<extruder_number> X<offset_on_X> Y<offset_on_Y>
-    {
-      #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
-        if (extrusion_mode > 1) {
-      #endif
-      if(setTargetedHotend(218)){
-        break;
-      }
-      if(code_seen('X'))
-      {
-        extruder_offset[X_AXIS][tmp_extruder] = code_value();
-      }
-      if(code_seen('Y'))
-      {
-        extruder_offset[Y_AXIS][tmp_extruder] = code_value();
-      }
-      SERIAL_ECHO_START;
-      SERIAL_ECHOPGM(MSG_HOTEND_OFFSET);
-      for(tmp_extruder = 0; tmp_extruder < EXTRUDERS
-        #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
-          && tmp_extruder < extrusion_mode
-        #endif
-        ; tmp_extruder++)
-      {
-         SERIAL_ECHOPGM(" ");
-         SERIAL_ECHO(extruder_offset[X_AXIS][tmp_extruder]);
-         SERIAL_ECHOPGM(",");
-         SERIAL_ECHO(extruder_offset[Y_AXIS][tmp_extruder]);
-      }
-      SERIAL_ECHOLN("");
-      #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
-        }
-      #endif
-    }break;
+
+    #ifndef ALTER_EXTRUSION_MODE_ON_THE_FLY
+          #if EXTRUDERS > 1
+              case 218: // M218 - set hotend offset (in mm), T<extruder_number> X<offset_on_X> Y<offset_on_Y>
+              {
+                // #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+                //   if (extrusion_mode > 1) {
+                // #endif
+                if(setTargetedHotend(218)){
+                  break;
+                }
+                if(code_seen('X'))
+                {
+                  extruder_offset[X_AXIS][tmp_extruder] = code_value();
+                }
+                if(code_seen('Y'))
+                {
+                  extruder_offset[Y_AXIS][tmp_extruder] = code_value();
+                }
+                SERIAL_ECHO_START;
+                SERIAL_ECHOPGM(MSG_HOTEND_OFFSET);
+                for(tmp_extruder = 0; tmp_extruder < EXTRUDERS
+                  // #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+                  //   && tmp_extruder < extrusion_mode
+                  // #endif
+                  ; tmp_extruder++)
+                {
+                   SERIAL_ECHOPGM(" ");
+                   SERIAL_ECHO(extruder_offset[X_AXIS][tmp_extruder]);
+                   SERIAL_ECHOPGM(",");
+                   SERIAL_ECHO(extruder_offset[Y_AXIS][tmp_extruder]);
+                }
+                SERIAL_ECHOLN("");
+                // #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+                //   }
+                // #endif
+              }break;
+        #endif  // EXTRUDERS > 1
+/*    #else  // defined ALTER_EXTRUSION_MODE_ON_THE_FLY
+          case 218: // M218 - set hotend offset (in mm), T<extruder_number> X<offset_on_X> Y<offset_on_Y>
+          {
+            // #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+            //   if (extrusion_mode > 1) {
+            // #endif
+            if(setTargetedHotend(218)){
+              break;
+            }
+            if(code_seen('X'))
+            {
+              other_extruder_offset[X_AXIS][tmp_extruder] = code_value();
+            }
+            if(code_seen('Y'))
+            {
+              other_extruder_offset[Y_AXIS][tmp_extruder] = code_value();
+            }
+            SERIAL_ECHO_START;
+            SERIAL_ECHOPGM(MSG_HOTEND_OFFSET);
+            for(tmp_extruder = 0; tmp_extruder < EXTRUDERS
+              // #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+              //   && tmp_extruder < extrusion_mode
+              // #endif
+              ; tmp_extruder++)
+            {
+               SERIAL_ECHOPGM(" ");
+               SERIAL_ECHO(other_extruder_offset[X_AXIS][tmp_extruder]);
+               SERIAL_ECHOPGM(",");
+               SERIAL_ECHO(other_extruder_offset[Y_AXIS][tmp_extruder]);
+            }
+            SERIAL_ECHOLN("");
+            // #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+            //   }
+            // #endif
+          }break;*/
     #endif
     case 220: // M220 S<factor in percent>- set speed factor override percentage
     {
@@ -2471,31 +2513,30 @@ void process_commands()
           feedrate = next_feedrate;
         }
       }
-      #if EXTRUDERS > 1
-      #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
-        if (extrusion_mode > 1) {
-      #endif
-      if(tmp_extruder != active_extruder) {
-        // Save current position to return to after applying extruder offset
-        memcpy(destination, current_position, sizeof(destination));
-        // Offset extruder (only by XY)
-        int i;
-        for(i = 0; i < 2; i++) {
-           current_position[i] = current_position[i] -
-                                 extruder_offset[i][active_extruder] +
-                                 extruder_offset[i][tmp_extruder];
-        }
-        // Set the new active extruder and position
-        active_extruder = tmp_extruder;
-        plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
-        // Move to the old position if 'F' was in the parameters
-        if(make_move && Stopped == false) {
-           prepare_move();
-        }
-      }
-      #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
-        }
-      #endif
+      #ifndef ALTER_EXTRUSION_MODE_ON_THE_FLY
+          #if EXTRUDERS > 1
+          // #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+          //    if (extrusion_mode > 1) {
+          // #endif
+          if(tmp_extruder != active_extruder) {
+            // Save current position to return to after applying extruder offset
+            memcpy(destination, current_position, sizeof(destination));
+            // Offset extruder (only by XY)
+            int i;
+            for(i = 0; i < 2; i++) {
+               current_position[i] = current_position[i] -
+                                     extruder_offset[i][active_extruder] +
+                                     extruder_offset[i][tmp_extruder];
+            }
+            // Set the new active extruder and position
+            active_extruder = tmp_extruder;
+            plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
+            // Move to the old position if 'F' was in the parameters
+            if(make_move && Stopped == false) {
+               prepare_move();
+            }
+          }
+        #endif
       #endif
       SERIAL_ECHO_START;
       SERIAL_ECHOPGM(MSG_ACTIVE_EXTRUDER);
