@@ -250,6 +250,7 @@ extern uint8_t active_extruder;
 
 #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
   extern uint8_t extrusion_mode;
+  extern float other_extruder_offset[3][EXTRUDERS-1];
 
   #if EXTRUDERS > 2
       # define ARRAY_BY_OTHER_EXTRUDERS(v2, v3) { v2, v3}

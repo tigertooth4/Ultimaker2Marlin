@@ -1835,41 +1835,55 @@ void process_commands()
                 // #endif
               }break;
         #endif  // EXTRUDERS > 1
-/*    #else  // defined ALTER_EXTRUSION_MODE_ON_THE_FLY
-          case 218: // M218 - set hotend offset (in mm), T<extruder_number> X<offset_on_X> Y<offset_on_Y>
-          {
-            // #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
-            //   if (extrusion_mode > 1) {
-            // #endif
-            if(setTargetedHotend(218)){
-              break;
-            }
-            if(code_seen('X'))
-            {
-              other_extruder_offset[X_AXIS][tmp_extruder] = code_value();
-            }
-            if(code_seen('Y'))
-            {
-              other_extruder_offset[Y_AXIS][tmp_extruder] = code_value();
-            }
-            SERIAL_ECHO_START;
-            SERIAL_ECHOPGM(MSG_HOTEND_OFFSET);
-            for(tmp_extruder = 0; tmp_extruder < EXTRUDERS
-              // #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
-              //   && tmp_extruder < extrusion_mode
-              // #endif
-              ; tmp_extruder++)
-            {
-               SERIAL_ECHOPGM(" ");
-               SERIAL_ECHO(other_extruder_offset[X_AXIS][tmp_extruder]);
-               SERIAL_ECHOPGM(",");
-               SERIAL_ECHO(other_extruder_offset[Y_AXIS][tmp_extruder]);
-            }
-            SERIAL_ECHOLN("");
-            // #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
-            //   }
-            // #endif
-          }break;*/
+    #else  // defined ALTER_EXTRUSION_MODE_ON_THE_FLY
+            #if EXTRUDERS > 1
+                case 218: // M218 - set hotend offset (in mm), T<extruder_number> X<offset_on_X> Y<offset_on_Y> Z<offset_on_Z>
+                {
+                  // #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+                  //   if (extrusion_mode > 1) {
+                  // #endif
+                  if(setTargetedHotend(218)){
+                    break;
+                  }
+                  uint8_t extruder_num;
+                  if(code_seen('T') && code_value() >= 0 && code_value() < extrusion_mode)
+                  {
+                      extruder_num = code_value();
+                      if(code_seen('X'))
+                      {
+                        other_extruder_offset[X_AXIS][extruder_num] = code_value();
+                      }
+                      if(code_seen('Y'))
+                      {
+                        other_extruder_offset[Y_AXIS][extruder_num] = code_value();
+                      }
+                      if(code_seen('Z'))
+                      {
+                        other_extruder_offset[Z_AXIS][extruder_num] = code_value();
+                      }
+                }
+                  SERIAL_ECHO_START;
+                  SERIAL_ECHOPGM(MSG_HOTEND_OFFSET);
+                  for(tmp_extruder = 0; tmp_extruder < extrusion_mode
+                    // #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+                    //   && tmp_extruder < extrusion_mode
+                    // #endif
+                    ; tmp_extruder++)
+                  {
+                     SERIAL_ECHOPGM(" ");
+                     SERIAL_ECHO(other_extruder_offset[X_AXIS][tmp_extruder]);
+                     SERIAL_ECHOPGM(",");
+                     SERIAL_ECHO(other_extruder_offset[Y_AXIS][tmp_extruder]);
+                     SERIAL_ECHOPGM(",");
+                     SERIAL_ECHO(other_extruder_offset[Z_AXIS][tmp_extruder]);
+                  }
+                  SERIAL_ECHOLN("");
+                  // #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+                  //   }
+                  // #endif
+                }break;
+          #endif  // EXTRUDERS > 1
+
     #endif
     case 220: // M220 S<factor in percent>- set speed factor override percentage
     {
@@ -2515,9 +2529,6 @@ void process_commands()
       }
       #ifndef ALTER_EXTRUSION_MODE_ON_THE_FLY
           #if EXTRUDERS > 1
-          // #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
-          //    if (extrusion_mode > 1) {
-          // #endif
           if(tmp_extruder != active_extruder) {
             // Save current position to return to after applying extruder offset
             memcpy(destination, current_position, sizeof(destination));
@@ -2537,6 +2548,29 @@ void process_commands()
             }
           }
         #endif
+      #else // Defined ALTER_EXTRUSION_MODE_ON_THE_FLY
+          if(extrusion_mode > 1 && tmp_extruder != active_extruder) {
+            // Save current position to return to after applying extruder offset
+            memcpy(destination, current_position, sizeof(destination));
+            // Offset extruder (By XYZ)
+            int i;
+            for(i = 0; i < 3; i++) {
+              /*current_position[i] = current_position[i] -
+                                     other_extruder_offset[i][active_extruder] +
+                                     other_extruder_offset[i][tmp_extruder];*/
+                if(active_extruder > 0)
+                  current_position[i] -= other_extruder_offset[i][active_extruder-1];
+                if(tmp_extruder > 0)
+                  current_position[i] += other_extruder_offset[i][tmp_extruder - 1];
+            }
+            // Set the new active extruder and position
+            active_extruder = tmp_extruder;
+            plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
+            // Move to the old position if 'F' was in the parameters
+            if(make_move && Stopped == false) {
+               prepare_move();
+            }
+          }
       #endif
       SERIAL_ECHO_START;
       SERIAL_ECHOPGM(MSG_ACTIVE_EXTRUDER);
