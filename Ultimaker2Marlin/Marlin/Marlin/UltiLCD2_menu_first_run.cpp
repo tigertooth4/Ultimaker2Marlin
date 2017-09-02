@@ -45,6 +45,7 @@ static void lcd_menu_first_run_bed_level_paper_right();
 
 #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
 static void lcd_menu_first_run_second_nozzle_offset_paper();
+static void lcd_menu_first_run_third_nozzle_offset_paper();
 static void lcd_menu_first_run_second_nozzle_offset_measurement();
 static void lcd_menu_first_run_third_nozzle_offset_measurment();
 static void lcd_menu_first_run_nozzle_offset_paper_done();
@@ -88,20 +89,20 @@ static void homeAndParkHeadForCenterAdjustment2()
           if (printing_state == PRINT_STATE_NORMAL && movesplanned() < 1)
           {
               // move to waiting position
-              plan_buffer_line(LEFT_SWITCH_WAITING_POSITION_X, LEFT_SWITCH_WAITING_POSITION_Y, current_position[Z_AXIS], current_position[E_AXIS], 60, 0);
+              plan_buffer_line(LEFT_SWITCH_WAITING_POSITION_X, LEFT_SWITCH_WAITING_POSITION_Y, current_position[Z_AXIS], current_position[E_AXIS], 100, 0);
               currentStep = 1;
           }
           if (printing_state == PRINT_STATE_NORMAL && currentStep == 1 && movesplanned() < 1)
           {
               // move to switch nozzle
               plan_buffer_line(LEFT_SWITCH_FINAL_POSITION_X, LEFT_SWITCH_WAITING_POSITION_Y, current_position[Z_AXIS], current_position[E_AXIS], 60, 0);
-              currentStep++;
+              currentStep = 2;
           }
           if (printing_state == PRINT_STATE_NORMAL && currentStep == 2 && movesplanned() < 1)
           {
               // move to switch nozzle
-              plan_buffer_line(LEFT_SWITCH_WAITING_POSITION_X, LEFT_SWITCH_WAITING_POSITION_Y, current_position[Z_AXIS], current_position[E_AXIS], 60, 0);
-              currentStep++;
+              plan_buffer_line(LEFT_SWITCH_WAITING_POSITION_X, LEFT_SWITCH_WAITING_POSITION_Y, current_position[Z_AXIS], current_position[E_AXIS], 100, 0);
+              currentStep = 3;
           }
           if (printing_state == PRINT_STATE_NORMAL && currentStep == 3 && movesplanned() < 1)
           {   // move to headParkCenterPosition
@@ -245,9 +246,47 @@ static void changeToSecondNozzleParkHeadToCenter()
   }
 }
 
+static void changeToThirdNozzleParkHeadToCenter()
+{
+  // Before moving, let's save the second nozzle offset settings
+  other_extruder_offset[Z_AXIS][0] = current_position[Z_AXIS];
+  // save the settings to EEPROM
+  Config_StoreSettings();
+
+  char buffer[32];
+  if (printing_state == PRINT_STATE_NORMAL && movesplanned() < 1)
+  {
+      // move to waiting position
+      plan_buffer_line(RIGHT_SWITCH_WAITING_POSITION_X, RIGHT_SWITCH_WAITING_POSITION_Y, current_position[Z_AXIS], current_position[E_AXIS], 60, 0);
+      currentStep = 1;
+  }
+  if (printing_state == PRINT_STATE_NORMAL && currentStep == 1 && movesplanned() < 1)
+  {
+      // move to switch nozzle
+      plan_buffer_line(RIGHT_SWITCH_FINAL_POSITION_X, RIGHT_SWITCH_WAITING_POSITION_Y, current_position[Z_AXIS], current_position[E_AXIS], 60, 0);
+      currentStep = 2;
+  }
+  if (printing_state == PRINT_STATE_NORMAL && currentStep == 2 && movesplanned() < 1)
+  {
+      // move to switch nozzle
+      plan_buffer_line(RIGHT_SWITCH_WAITING_POSITION_X, RIGHT_SWITCH_WAITING_POSITION_Y, current_position[Z_AXIS], current_position[E_AXIS], 60, 0);
+      currentStep = 3;
+  }
+  if (printing_state == PRINT_STATE_NORMAL && currentStep == 3 && movesplanned() < 1)
+  {   // move to headParkCenterPosition
+      sprintf_P(buffer, PSTR("G1 F%i Z%i X%i Y%i"), int(homing_feedrate[0]),
+                                                    int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_Z, BED_CENTER_ADJUST_Z_M)),
+                                                    int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_X, BED_CENTER_ADJUST_X_M)),
+                                                    int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_Y, BED_CENTER_ADJUST_Y_M)));
+      currentStep = 4;
+      enquecommand(buffer);
+      return;
+  }
+}
+
 static void homeAllStoreSecondNozzleOffsetSettings()
 {
-  other_extruder_offset[Z_AXIS][0] += current_position[Z_AXIS];  //Adjust the Z homing position to account for the thickness of the paper.
+  other_extruder_offset[Z_AXIS][0] = current_position[Z_AXIS];
   // now that we are finished, save the settings to EEPROM
   Config_StoreSettings();
   enquecommand_P(PSTR("G28"));
@@ -255,7 +294,7 @@ static void homeAllStoreSecondNozzleOffsetSettings()
 
 static void homeAllStoreThirdNozzleOffsetSettings()
 {
-  other_extruder_offset[Z_AXIS][1] += current_position[Z_AXIS];  //Adjust the Z homing position to account for the thickness of the paper.
+  other_extruder_offset[Z_AXIS][1] = current_position[Z_AXIS];
   // now that we are finished, save the settings to EEPROM
   Config_StoreSettings();
   enquecommand_P(PSTR("G28"));
@@ -433,21 +472,21 @@ static void lcd_menu_first_run_bed_level_paper_right()
     LED_GLOW();
 
     SELECT_MAIN_MENU_ITEM(0);
-/*    if (IS_FIRST_RUN_DONE())
-        lcd_info_screen(lcd_menu_main, homeBed, PSTR("DONE"));
-    else
-        lcd_info_screen(lcd_menu_first_run_material_load, homeBed, PSTR("CONTINUE"));
-    */
+
     #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
         if (extrusion_mode < 2) //single nozzle
           lcd_info_screen(lcd_menu_main, homeBed, PSTR("DONE"));
-        else if (extrusion_mode > 1) //multiple nozzle, next step is nozzle 1 offset measurements
+        else if (extrusion_mode > 1) //multiple nozzle, next step is second nozzle offset measurements
         {
-          lcd_info_screen(lcd_menu_first_run_second_nozzle_offset_paper, changeToSecondNozzleParkHeadToCenter, PSTR("CONTINUE")); //, lcd_menu_main, homeBed, PSTR("DONE"));
-          currentStep = 0;
+          lcd_info_screen(lcd_menu_first_run_second_nozzle_offset_paper, changeToSecondNozzleParkHeadToCenter, PSTR("CONTINUE"));
+          //currentStep = 0;
         }
     #else // defined ALTER_EXTRUSION_MODE_ON_THE_FLY
-        lcd_info_screen(lcd_menu_main, homeBed, PSTR("DONE"));
+        //lcd_info_screen(lcd_menu_main, homeBed, PSTR("DONE"));
+        if (IS_FIRST_RUN_DONE())
+            lcd_info_screen(lcd_menu_main, homeBed, PSTR("DONE"));
+        else
+            lcd_info_screen(lcd_menu_first_run_material_load, homeBed, PSTR("CONTINUE"));
     #endif
 
     DRAW_PROGRESS_NR_IF_NOT_DONE(10);
@@ -466,9 +505,9 @@ static void lcd_menu_first_run_second_nozzle_offset_paper()
         lcd_question_screen(lcd_menu_first_run_second_nozzle_offset_measurement, NULL, PSTR("CONTINUE"), lcd_menu_main, homeBed, PSTR("ABORT"));
     else
         lcd_info_screen(lcd_menu_main, homeBed, PSTR("ABORT"));
-    DRAW_PROGRESS_NR_IF_NOT_DONE(7);
+    DRAW_PROGRESS_NR_IF_NOT_DONE(11);
     lcd_lib_draw_string_centerP(10, PSTR("I'm changing to"));
-    lcd_lib_draw_string_centerP(20, PSTR("second nozzle..."));
+    lcd_lib_draw_string_centerP(20, PSTR("nozzle 2 (middle one)..."));
     lcd_lib_draw_string_centerP(30, PSTR("Please use paper to"));
     lcd_lib_draw_string_centerP(40, PSTR("fine-tune the distance."));
     lcd_lib_update_screen();
@@ -494,11 +533,11 @@ static void lcd_menu_first_run_second_nozzle_offset_measurement()
       else
       {
           if (extrusion_mode < 3)
-              lcd_info_screen(lcd_menu_first_run_nozzle_offset_paper_done, homeBed, PSTR("CONTINUE")); // homeBed need revise or define new function
+              lcd_info_screen(lcd_menu_first_run_nozzle_offset_paper_done, homeAllStoreSecondNozzleOffsetSettings, PSTR("CONTINUE")); // homeBed need revise or define new function
           else
-              lcd_info_screen(lcd_menu_first_run_third_nozzle_offset_measurment, NULL, PSTR("CONTINUE"));
+              lcd_info_screen(lcd_menu_first_run_third_nozzle_offset_paper, changeToThirdNozzleParkHeadToCenter, PSTR("CONTINUE"));
       }
-      DRAW_PROGRESS_NR_IF_NOT_DONE(8);
+      DRAW_PROGRESS_NR_IF_NOT_DONE(12);
       lcd_lib_draw_string_centerP(10, PSTR("Slide a paper between"));
       lcd_lib_draw_string_centerP(20, PSTR("buildplate and nozzle"));
       lcd_lib_draw_string_centerP(30, PSTR("until you feel a"));
@@ -506,16 +545,19 @@ static void lcd_menu_first_run_second_nozzle_offset_measurement()
       lcd_lib_update_screen();
 }
 
-static void lcd_menu_first_run_nozzle_offset_paper_done()
+static void lcd_menu_first_run_third_nozzle_offset_paper()
 {
-  SELECT_MAIN_MENU_ITEM(0);
-  lcd_info_screen(lcd_menu_first_run_bed_level_paper_center, parkHeadForCenterAdjustment, PSTR("CONTINUE"));
-  DRAW_PROGRESS_NR_IF_NOT_DONE(7);
-  lcd_lib_draw_string_centerP(10, PSTR("Repeat this step, but"));
-  lcd_lib_draw_string_centerP(20, PSTR("now use a sheet of"));
-  lcd_lib_draw_string_centerP(30, PSTR("paper to fine-tune"));
-  lcd_lib_draw_string_centerP(40, PSTR("the buildplate level."));
-  lcd_lib_update_screen();
+    SELECT_MAIN_MENU_ITEM(0);
+    if (currentStep == 4 && movesplanned() < 1) // supposed moves are all executed
+        lcd_question_screen(lcd_menu_first_run_third_nozzle_offset_measurment, NULL, PSTR("CONTINUE"), lcd_menu_main, homeBed, PSTR("ABORT"));
+    else
+        lcd_info_screen(lcd_menu_main, homeBed, PSTR("ABORT"));
+    DRAW_PROGRESS_NR_IF_NOT_DONE(13);
+    lcd_lib_draw_string_centerP(10, PSTR("I'm changing to"));
+    lcd_lib_draw_string_centerP(20, PSTR("nozzle 3..."));
+    lcd_lib_draw_string_centerP(30, PSTR("Please use paper to"));
+    lcd_lib_draw_string_centerP(40, PSTR("fine-tune the distance."));
+    lcd_lib_update_screen();
 
 }
 
@@ -537,9 +579,9 @@ static void lcd_menu_first_run_third_nozzle_offset_measurment()
         lcd_info_screen(NULL, NULL, PSTR("CONTINUE"));
     else
     {
-        lcd_info_screen(lcd_menu_first_run_nozzle_offset_paper_done, homeBed, PSTR("CONTINUE")); // homeBed need revise or define new function
+        lcd_info_screen(lcd_menu_first_run_nozzle_offset_paper_done, homeAllStoreThirdNozzleOffsetSettings, PSTR("CONTINUE"));
     }
-    DRAW_PROGRESS_NR_IF_NOT_DONE(8);
+    DRAW_PROGRESS_NR_IF_NOT_DONE(14);
     lcd_lib_draw_string_centerP(10, PSTR("Slide a paper between"));
     lcd_lib_draw_string_centerP(20, PSTR("buildplate and nozzle"));
     lcd_lib_draw_string_centerP(30, PSTR("until you feel a"));
@@ -547,6 +589,28 @@ static void lcd_menu_first_run_third_nozzle_offset_measurment()
     lcd_lib_update_screen();
 
 }
+
+static void lcd_menu_first_run_nozzle_offset_paper_done()
+{
+  SELECT_MAIN_MENU_ITEM(0);
+  lcd_info_screen(lcd_menu_main, NULL, PSTR("DONE"));
+  //DRAW_PROGRESS_NR_IF_NOT_DONE(13);
+  //Report the nozzle offset settings:
+  char buffer[32];
+  lcd_lib_draw_string_centerP(10, PSTR("Offset Report:"));
+  lcd_lib_draw_string_centerP(20, PSTR("Nozzle 1:  0.0"));
+
+  sprintf_P(buffer, PSTR("Nozzle 2:  %f"), float(other_extruder_offset[Z_AXIS][0]));
+  lcd_lib_draw_string_centerP(30, buffer);
+
+  sprintf_P(buffer, PSTR("Nozzle 3:  %f"), float(other_extruder_offset[Z_AXIS][1]));
+  lcd_lib_draw_string_centerP(40, buffer);
+
+  lcd_lib_update_screen();
+
+}
+
+
 #endif
 
 
