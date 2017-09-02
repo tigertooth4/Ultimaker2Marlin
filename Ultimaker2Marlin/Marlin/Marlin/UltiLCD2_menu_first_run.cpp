@@ -31,6 +31,7 @@
 #define BED_RIGHT_ADJUST_X_M (X_MAX_POS_M - 20)
 #define BED_RIGHT_ADJUST_Y_M 25
 
+static uint8_t currentStep;
 static void lcd_menu_first_run_init_2();
 static void lcd_menu_first_run_init_3();
 
@@ -41,6 +42,13 @@ static void lcd_menu_first_run_bed_level_paper();
 static void lcd_menu_first_run_bed_level_paper_center();
 static void lcd_menu_first_run_bed_level_paper_left();
 static void lcd_menu_first_run_bed_level_paper_right();
+
+#ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+static void lcd_menu_first_run_second_nozzle_offset_paper();
+static void lcd_menu_first_run_second_nozzle_offset_measurement();
+static void lcd_menu_first_run_third_nozzle_offset_measurment();
+static void lcd_menu_first_run_nozzle_offset_paper_done();
+#endif
 
 static void lcd_menu_first_run_material_load();
 static void lcd_menu_first_run_material_select_1();
@@ -59,18 +67,6 @@ static void lcd_menu_first_run_print_card_detect();
 #define DRAW_PROGRESS_NR(nr) do { lcd_lib_draw_stringP((nr < 10) ? 100 : 94, 0, PSTR( #nr "/21")); } while(0)
 #define CLEAR_PROGRESS_NR(nr) do { lcd_lib_clear_stringP((nr < 10) ? 100 : 94, 0, PSTR( #nr "/21")); } while(0)
 
-//Run the first time you start-up the machine or after a factory reset.
-void lcd_menu_first_run_init()
-{
-    SELECT_MAIN_MENU_ITEM(0);
-    lcd_info_screen(lcd_menu_first_run_init_2, NULL, PSTR("CONTINUE"));
-    DRAW_PROGRESS_NR_IF_NOT_DONE(1);
-    lcd_lib_draw_string_centerP(10, PSTR("Welcome to the first"));
-    lcd_lib_draw_string_centerP(20, PSTR("startup of your"));
-    lcd_lib_draw_string_centerP(30, PSTR("DinkyPro! Press the"));
-    lcd_lib_draw_string_centerP(40, PSTR("button to continue"));
-    lcd_lib_update_screen();
-}
 
 static void homeAndParkHeadForCenterAdjustment2()
 {
@@ -78,24 +74,49 @@ static void homeAndParkHeadForCenterAdjustment2()
     enquecommand_P(PSTR("G28 Z0 X0 Y0"));
     char buffer[32];
     #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
-      sprintf_P(buffer, PSTR("G1 F%i Z%i X%i Y%i"), int(homing_feedrate[0]),
-                                                    int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_Z, BED_CENTER_ADJUST_Z_M)),
-                                                    int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_X, BED_CENTER_ADJUST_X_M)),
-                                                    int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_Y, BED_CENTER_ADJUST_Y_M)));
+      if(extrusion_mode < 2)  //single extrusion_mode
+      {
+            sprintf_P(buffer, PSTR("G1 F%i Z%i X%i Y%i"), int(homing_feedrate[0]),
+                                                          int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_Z, BED_CENTER_ADJUST_Z_M)),
+                                                          int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_X, BED_CENTER_ADJUST_X_M)),
+                                                          int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_Y, BED_CENTER_ADJUST_Y_M)));
+            enquecommand(buffer);
+      }
+      else  //multiple extrusion_mode: moving on to the left pin to switch to first nozzle then to center adjustment position
+      {
+
+          if (printing_state == PRINT_STATE_NORMAL && movesplanned() < 1)
+          {
+              // move to waiting position
+              plan_buffer_line(LEFT_SWITCH_WAITING_POSITION_X, LEFT_SWITCH_WAITING_POSITION_Y, current_position[Z_AXIS], current_position[E_AXIS], 60, 0);
+              currentStep = 1;
+          }
+          if (printing_state == PRINT_STATE_NORMAL && currentStep == 1 && movesplanned() < 1)
+          {
+              // move to switch nozzle
+              plan_buffer_line(LEFT_SWITCH_FINAL_POSITION_X, LEFT_SWITCH_WAITING_POSITION_Y, current_position[Z_AXIS], current_position[E_AXIS], 60, 0);
+              currentStep++;
+          }
+          if (printing_state == PRINT_STATE_NORMAL && currentStep == 2 && movesplanned() < 1)
+          {
+              // move to switch nozzle
+              plan_buffer_line(LEFT_SWITCH_WAITING_POSITION_X, LEFT_SWITCH_WAITING_POSITION_Y, current_position[Z_AXIS], current_position[E_AXIS], 60, 0);
+              currentStep++;
+          }
+          if (printing_state == PRINT_STATE_NORMAL && currentStep == 3 && movesplanned() < 1)
+          {   // move to headParkCenterPosition
+              sprintf_P(buffer, PSTR("G1 F%i Z%i X%i Y%i"), int(homing_feedrate[0]),
+                                                            int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_Z, BED_CENTER_ADJUST_Z_M)),
+                                                            int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_X, BED_CENTER_ADJUST_X_M)),
+                                                            int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_Y, BED_CENTER_ADJUST_Y_M)));
+              currentStep = 0;
+              enquecommand(buffer);
+          }
+      }
     #else
       sprintf_P(buffer, PSTR("G1 F%i Z%i X%i Y%i"), int(homing_feedrate[0]), int(BED_CENTER_ADJUST_Z), int(BED_CENTER_ADJUST_X), int(BED_CENTER_ADJUST_Y));
+      enquecommand(buffer);
     #endif
-    enquecommand(buffer);
-}
-//Started bed leveling from the calibration menu
-void lcd_menu_first_run_start_bed_leveling()
-{
-    lcd_question_screen(lcd_menu_first_run_bed_level_center_adjust, homeAndParkHeadForCenterAdjustment2, PSTR("CONTINUE"), lcd_menu_main, NULL, PSTR("CANCEL"));
-    lcd_lib_draw_string_centerP(10, PSTR("I will guide you"));
-    lcd_lib_draw_string_centerP(20, PSTR("through the process"));
-    lcd_lib_draw_string_centerP(30, PSTR("of adjusting your"));
-    lcd_lib_draw_string_centerP(40, PSTR("buildplate."));
-    lcd_lib_update_screen();
 }
 
 static void homeAndRaiseBed()
@@ -108,18 +129,6 @@ static void homeAndRaiseBed()
       sprintf_P(buffer, PSTR("G1 F%i Z%i"), int(homing_feedrate[0]), int(BED_CENTER_ADJUST_Z));
     #endif
     enquecommand(buffer);
-}
-
-static void lcd_menu_first_run_init_2()
-{
-    SELECT_MAIN_MENU_ITEM(0);
-    lcd_info_screen(lcd_menu_first_run_init_3, homeAndRaiseBed, PSTR("CONTINUE"));
-    DRAW_PROGRESS_NR_IF_NOT_DONE(2);
-    lcd_lib_draw_string_centerP(10, PSTR("Because this is the"));
-    lcd_lib_draw_string_centerP(20, PSTR("first startup I will"));
-    lcd_lib_draw_string_centerP(30, PSTR("walk you through"));
-    lcd_lib_draw_string_centerP(40, PSTR("a first run wizard."));
-    lcd_lib_update_screen();
 }
 
 static void homeAndParkHeadForCenterAdjustment()
@@ -135,18 +144,6 @@ static void homeAndParkHeadForCenterAdjustment()
       sprintf_P(buffer, PSTR("G1 F%i Z%i X%i Y%i"), int(homing_feedrate[0]), int(BED_CENTER_ADJUST_Z), int(BED_CENTER_ADJUST_X), int(BED_CENTER_ADJUST_Y));
     #endif
     enquecommand(buffer);
-}
-
-static void lcd_menu_first_run_init_3()
-{
-    SELECT_MAIN_MENU_ITEM(0);
-    lcd_info_screen(lcd_menu_first_run_bed_level_center_adjust, homeAndParkHeadForCenterAdjustment, PSTR("CONTINUE"));
-    DRAW_PROGRESS_NR_IF_NOT_DONE(3);
-    lcd_lib_draw_string_centerP(10, PSTR("After transportation"));
-    lcd_lib_draw_string_centerP(20, PSTR("we need to do some"));
-    lcd_lib_draw_string_centerP(30, PSTR("adjustments, we are"));
-    lcd_lib_draw_string_centerP(40, PSTR("going to do that now."));
-    lcd_lib_update_screen();
 }
 
 static void parkHeadForLeftAdjustment()
@@ -169,6 +166,160 @@ static void parkHeadForLeftAdjustment()
     sprintf_P(buffer, PSTR("G1 F%i Z0"), int(homing_feedrate[Z_AXIS]));
     enquecommand(buffer);
 }
+
+static void parkHeadForRightAdjustment()
+{
+    char buffer[32];
+    sprintf_P(buffer, PSTR("G1 F%i Z5"), int(homing_feedrate[Z_AXIS]));
+    enquecommand(buffer);
+    #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+      sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(homing_feedrate[X_AXIS]),
+                                                int(CHOOSE_BY_EXTRUSION_MODE(BED_RIGHT_ADJUST_X, BED_RIGHT_ADJUST_X_M)),
+                                                int(CHOOSE_BY_EXTRUSION_MODE(BED_RIGHT_ADJUST_Y, BED_RIGHT_ADJUST_Y_M)));
+    #else
+      sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(homing_feedrate[X_AXIS]),
+                                                int(BED_RIGHT_ADJUST_X),
+                                                int(BED_RIGHT_ADJUST_Y));
+    #endif
+    enquecommand(buffer);
+    sprintf_P(buffer, PSTR("G1 F%i Z0"), int(homing_feedrate[Z_AXIS]));
+    enquecommand(buffer);
+}
+
+static void parkHeadForCenterAdjustment()
+{
+    char buffer[32];
+    sprintf_P(buffer, PSTR("G1 F%i Z5"), int(homing_feedrate[Z_AXIS]));
+    enquecommand(buffer);
+    #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+      sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(homing_feedrate[X_AXIS]),
+                                                int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_X, BED_CENTER_ADJUST_X_M)),
+                                                int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_Y, BED_CENTER_ADJUST_Y_M)));
+    #else
+      sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(homing_feedrate[X_AXIS]), int(BED_CENTER_ADJUST_X), int(BED_CENTER_ADJUST_Y));
+    #endif
+    enquecommand(buffer);
+    sprintf_P(buffer, PSTR("G1 F%i Z0"), int(homing_feedrate[Z_AXIS]));
+    enquecommand(buffer);
+}
+
+static void homeBed()
+{
+    add_homeing[Z_AXIS] += LEVELING_OFFSET;  //Adjust the Z homing position to account for the thickness of the paper.
+    // now that we are finished, save the settings to EEPROM
+    Config_StoreSettings();
+    enquecommand_P(PSTR("G28 Z0"));
+}
+
+#ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+static void changeToSecondNozzleParkHeadToCenter()
+{
+  char buffer[32];
+  if (printing_state == PRINT_STATE_NORMAL && movesplanned() < 1)
+  {
+      // move to waiting position
+      plan_buffer_line(RIGHT_SWITCH_WAITING_POSITION_X, RIGHT_SWITCH_WAITING_POSITION_Y, current_position[Z_AXIS], current_position[E_AXIS], 60, 0);
+      currentStep = 1;
+  }
+  if (printing_state == PRINT_STATE_NORMAL && currentStep == 1 && movesplanned() < 1)
+  {
+      // move to switch nozzle
+      plan_buffer_line(RIGHT_SWITCH_MIDDLE_POSITION_X, RIGHT_SWITCH_WAITING_POSITION_Y, current_position[Z_AXIS], current_position[E_AXIS], 60, 0);
+      currentStep = 2;
+  }
+  if (printing_state == PRINT_STATE_NORMAL && currentStep == 2 && movesplanned() < 1)
+  {
+      // move to switch nozzle
+      plan_buffer_line(RIGHT_SWITCH_WAITING_POSITION_X, RIGHT_SWITCH_WAITING_POSITION_Y, current_position[Z_AXIS], current_position[E_AXIS], 60, 0);
+      currentStep = 3;
+  }
+  if (printing_state == PRINT_STATE_NORMAL && currentStep == 3 && movesplanned() < 1)
+  {   // move to headParkCenterPosition
+      sprintf_P(buffer, PSTR("G1 F%i Z%i X%i Y%i"), int(homing_feedrate[0]),
+                                                    int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_Z, BED_CENTER_ADJUST_Z_M)),
+                                                    int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_X, BED_CENTER_ADJUST_X_M)),
+                                                    int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_Y, BED_CENTER_ADJUST_Y_M)));
+      currentStep = 4;
+      enquecommand(buffer);
+      return;
+  }
+}
+
+static void homeAllStoreSecondNozzleOffsetSettings()
+{
+  other_extruder_offset[Z_AXIS][0] += current_position[Z_AXIS];  //Adjust the Z homing position to account for the thickness of the paper.
+  // now that we are finished, save the settings to EEPROM
+  Config_StoreSettings();
+  enquecommand_P(PSTR("G28"));
+}
+
+static void homeAllStoreThirdNozzleOffsetSettings()
+{
+  other_extruder_offset[Z_AXIS][1] += current_position[Z_AXIS];  //Adjust the Z homing position to account for the thickness of the paper.
+  // now that we are finished, save the settings to EEPROM
+  Config_StoreSettings();
+  enquecommand_P(PSTR("G28"));
+}
+
+#endif
+
+static void parkHeadForHeating()
+{
+    lcd_material_reset_defaults();
+    enquecommand_P(PSTR("G1 F12000 X110 Y10")); //Maybe change this!!
+    enquecommand_P(PSTR("M84"));//Disable motor power.
+}
+
+//Run the first time you start-up the machine or after a factory reset.
+void lcd_menu_first_run_init()
+{
+    SELECT_MAIN_MENU_ITEM(0);
+    lcd_info_screen(lcd_menu_first_run_init_2, NULL, PSTR("CONTINUE"));
+    DRAW_PROGRESS_NR_IF_NOT_DONE(1);
+    lcd_lib_draw_string_centerP(10, PSTR("Welcome to the first"));
+    lcd_lib_draw_string_centerP(20, PSTR("startup of your"));
+    lcd_lib_draw_string_centerP(30, PSTR("DinkyPro! Press the"));
+    lcd_lib_draw_string_centerP(40, PSTR("button to continue"));
+    lcd_lib_update_screen();
+}
+
+static void lcd_menu_first_run_init_2()
+{
+    SELECT_MAIN_MENU_ITEM(0);
+    lcd_info_screen(lcd_menu_first_run_init_3, homeAndRaiseBed, PSTR("CONTINUE"));
+    DRAW_PROGRESS_NR_IF_NOT_DONE(2);
+    lcd_lib_draw_string_centerP(10, PSTR("Because this is the"));
+    lcd_lib_draw_string_centerP(20, PSTR("first startup I will"));
+    lcd_lib_draw_string_centerP(30, PSTR("walk you through"));
+    lcd_lib_draw_string_centerP(40, PSTR("a first run wizard."));
+    lcd_lib_update_screen();
+}
+
+
+static void lcd_menu_first_run_init_3()
+{
+    SELECT_MAIN_MENU_ITEM(0);
+    lcd_info_screen(lcd_menu_first_run_bed_level_center_adjust, homeAndParkHeadForCenterAdjustment, PSTR("CONTINUE"));
+    DRAW_PROGRESS_NR_IF_NOT_DONE(3);
+    lcd_lib_draw_string_centerP(10, PSTR("After transportation"));
+    lcd_lib_draw_string_centerP(20, PSTR("we need to do some"));
+    lcd_lib_draw_string_centerP(30, PSTR("adjustments, we are"));
+    lcd_lib_draw_string_centerP(40, PSTR("going to do that now."));
+    lcd_lib_update_screen();
+}
+
+
+//Started bed leveling from the calibration menu
+void lcd_menu_first_run_start_bed_leveling()
+{
+    lcd_question_screen(lcd_menu_first_run_bed_level_center_adjust, homeAndParkHeadForCenterAdjustment2, PSTR("CONTINUE"), lcd_menu_main, NULL, PSTR("CANCEL"));
+    lcd_lib_draw_string_centerP(10, PSTR("I will guide you"));
+    lcd_lib_draw_string_centerP(20, PSTR("through the process"));
+    lcd_lib_draw_string_centerP(30, PSTR("of adjusting your"));
+    lcd_lib_draw_string_centerP(40, PSTR("buildplate."));
+    lcd_lib_update_screen();
+}
+
 
 static void lcd_menu_first_run_bed_level_center_adjust()
 {
@@ -196,24 +347,6 @@ static void lcd_menu_first_run_bed_level_center_adjust()
     lcd_lib_update_screen();
 }
 
-static void parkHeadForRightAdjustment()
-{
-    char buffer[32];
-    sprintf_P(buffer, PSTR("G1 F%i Z5"), int(homing_feedrate[Z_AXIS]));
-    enquecommand(buffer);
-    #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
-      sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(homing_feedrate[X_AXIS]),
-                                                int(CHOOSE_BY_EXTRUSION_MODE(BED_RIGHT_ADJUST_X, BED_RIGHT_ADJUST_X_M)),
-                                                int(CHOOSE_BY_EXTRUSION_MODE(BED_RIGHT_ADJUST_Y, BED_RIGHT_ADJUST_Y_M)));
-    #else
-      sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(homing_feedrate[X_AXIS]),
-                                                int(BED_RIGHT_ADJUST_X),
-                                                int(BED_RIGHT_ADJUST_Y));
-    #endif
-    enquecommand(buffer);
-    sprintf_P(buffer, PSTR("G1 F%i Z0"), int(homing_feedrate[Z_AXIS]));
-    enquecommand(buffer);
-}
 
 static void lcd_menu_first_run_bed_level_left_adjust()
 {
@@ -244,22 +377,6 @@ static void lcd_menu_first_run_bed_level_right_adjust()
     lcd_lib_update_screen();
 }
 
-static void parkHeadForCenterAdjustment()
-{
-    char buffer[32];
-    sprintf_P(buffer, PSTR("G1 F%i Z5"), int(homing_feedrate[Z_AXIS]));
-    enquecommand(buffer);
-    #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
-      sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(homing_feedrate[X_AXIS]),
-                                                int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_X, BED_CENTER_ADJUST_X_M)),
-                                                int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_Y, BED_CENTER_ADJUST_Y_M)));
-    #else
-      sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(homing_feedrate[X_AXIS]), int(BED_CENTER_ADJUST_X), int(BED_CENTER_ADJUST_Y));
-    #endif
-    enquecommand(buffer);
-    sprintf_P(buffer, PSTR("G1 F%i Z0"), int(homing_feedrate[Z_AXIS]));
-    enquecommand(buffer);
-}
 
 static void lcd_menu_first_run_bed_level_paper()
 {
@@ -311,35 +428,129 @@ static void lcd_menu_first_run_bed_level_paper_left()
     lcd_lib_update_screen();
 }
 
-static void homeBed()
-{
-    add_homeing[Z_AXIS] += LEVELING_OFFSET;  //Adjust the Z homing position to account for the thickness of the paper.
-    // now that we are finished, save the settings to EEPROM
-    Config_StoreSettings();
-    enquecommand_P(PSTR("G28 Z0"));
-}
-
 static void lcd_menu_first_run_bed_level_paper_right()
 {
     LED_GLOW();
 
     SELECT_MAIN_MENU_ITEM(0);
-    if (IS_FIRST_RUN_DONE())
+/*    if (IS_FIRST_RUN_DONE())
         lcd_info_screen(lcd_menu_main, homeBed, PSTR("DONE"));
     else
         lcd_info_screen(lcd_menu_first_run_material_load, homeBed, PSTR("CONTINUE"));
+    */
+    #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+        if (extrusion_mode < 2) //single nozzle
+          lcd_info_screen(lcd_menu_main, homeBed, PSTR("DONE"));
+        else if (extrusion_mode > 1) //multiple nozzle, next step is nozzle 1 offset measurements
+        {
+          lcd_info_screen(lcd_menu_first_run_second_nozzle_offset_paper, changeToSecondNozzleParkHeadToCenter, PSTR("CONTINUE")); //, lcd_menu_main, homeBed, PSTR("DONE"));
+          currentStep = 0;
+        }
+    #else // defined ALTER_EXTRUSION_MODE_ON_THE_FLY
+        lcd_info_screen(lcd_menu_main, homeBed, PSTR("DONE"));
+    #endif
+
     DRAW_PROGRESS_NR_IF_NOT_DONE(10);
     lcd_lib_draw_string_centerP(20, PSTR("Repeat this for"));
     lcd_lib_draw_string_centerP(30, PSTR("the right corner..."));
     lcd_lib_update_screen();
 }
 
-static void parkHeadForHeating()
+
+
+#ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
+static void lcd_menu_first_run_second_nozzle_offset_paper()
 {
-    lcd_material_reset_defaults();
-    enquecommand_P(PSTR("G1 F12000 X110 Y10")); //Maybe change this!!
-    enquecommand_P(PSTR("M84"));//Disable motor power.
+    SELECT_MAIN_MENU_ITEM(0);
+    if (currentStep == 4 && movesplanned() < 1) // supposed moves are all executed
+        lcd_question_screen(lcd_menu_first_run_second_nozzle_offset_measurement, NULL, PSTR("CONTINUE"), lcd_menu_main, homeBed, PSTR("ABORT"));
+    else
+        lcd_info_screen(lcd_menu_main, homeBed, PSTR("ABORT"));
+    DRAW_PROGRESS_NR_IF_NOT_DONE(7);
+    lcd_lib_draw_string_centerP(10, PSTR("I'm changing to"));
+    lcd_lib_draw_string_centerP(20, PSTR("second nozzle..."));
+    lcd_lib_draw_string_centerP(30, PSTR("Please use paper to"));
+    lcd_lib_draw_string_centerP(40, PSTR("fine-tune the distance."));
+    lcd_lib_update_screen();
+
 }
+
+static void lcd_menu_first_run_second_nozzle_offset_measurement()
+{
+      LED_GLOW();
+
+      if (lcd_lib_encoder_pos == ENCODER_NO_SELECTION)
+          lcd_lib_encoder_pos = 0;
+
+      if (printing_state == PRINT_STATE_NORMAL && lcd_lib_encoder_pos != 0 && movesplanned() < 4)
+      {
+          current_position[Z_AXIS] -= float(lcd_lib_encoder_pos) * 0.05;
+          lcd_lib_encoder_pos = 0;
+          plan_buffer_line(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS], 60, 0);
+      }
+
+      if (movesplanned() > 0)
+          lcd_info_screen(NULL, NULL, PSTR("CONTINUE"));
+      else
+      {
+          if (extrusion_mode < 3)
+              lcd_info_screen(lcd_menu_first_run_nozzle_offset_paper_done, homeBed, PSTR("CONTINUE")); // homeBed need revise or define new function
+          else
+              lcd_info_screen(lcd_menu_first_run_third_nozzle_offset_measurment, NULL, PSTR("CONTINUE"));
+      }
+      DRAW_PROGRESS_NR_IF_NOT_DONE(8);
+      lcd_lib_draw_string_centerP(10, PSTR("Slide a paper between"));
+      lcd_lib_draw_string_centerP(20, PSTR("buildplate and nozzle"));
+      lcd_lib_draw_string_centerP(30, PSTR("until you feel a"));
+      lcd_lib_draw_string_centerP(40, PSTR("bit resistance."));
+      lcd_lib_update_screen();
+}
+
+static void lcd_menu_first_run_nozzle_offset_paper_done()
+{
+  SELECT_MAIN_MENU_ITEM(0);
+  lcd_info_screen(lcd_menu_first_run_bed_level_paper_center, parkHeadForCenterAdjustment, PSTR("CONTINUE"));
+  DRAW_PROGRESS_NR_IF_NOT_DONE(7);
+  lcd_lib_draw_string_centerP(10, PSTR("Repeat this step, but"));
+  lcd_lib_draw_string_centerP(20, PSTR("now use a sheet of"));
+  lcd_lib_draw_string_centerP(30, PSTR("paper to fine-tune"));
+  lcd_lib_draw_string_centerP(40, PSTR("the buildplate level."));
+  lcd_lib_update_screen();
+
+}
+
+static void lcd_menu_first_run_third_nozzle_offset_measurment()
+{
+    LED_GLOW();
+
+    if (lcd_lib_encoder_pos == ENCODER_NO_SELECTION)
+        lcd_lib_encoder_pos = 0;
+
+    if (printing_state == PRINT_STATE_NORMAL && lcd_lib_encoder_pos != 0 && movesplanned() < 4)
+    {
+        current_position[Z_AXIS] -= float(lcd_lib_encoder_pos) * 0.05;
+        lcd_lib_encoder_pos = 0;
+        plan_buffer_line(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS], 60, 0);
+    }
+
+    if (movesplanned() > 0)
+        lcd_info_screen(NULL, NULL, PSTR("CONTINUE"));
+    else
+    {
+        lcd_info_screen(lcd_menu_first_run_nozzle_offset_paper_done, homeBed, PSTR("CONTINUE")); // homeBed need revise or define new function
+    }
+    DRAW_PROGRESS_NR_IF_NOT_DONE(8);
+    lcd_lib_draw_string_centerP(10, PSTR("Slide a paper between"));
+    lcd_lib_draw_string_centerP(20, PSTR("buildplate and nozzle"));
+    lcd_lib_draw_string_centerP(30, PSTR("until you feel a"));
+    lcd_lib_draw_string_centerP(40, PSTR("bit resistance."));
+    lcd_lib_update_screen();
+
+}
+#endif
+
+
+
 
 static void lcd_menu_first_run_material_load()
 {
@@ -508,7 +719,7 @@ static void lcd_menu_first_run_material_load_insert()
     DRAW_PROGRESS_NR(17);
     lcd_lib_draw_string_centerP(10, PSTR("Insert new material"));
     lcd_lib_draw_string_centerP(20, PSTR("from the rear of"));
-    lcd_lib_draw_string_centerP(30, PSTR("your Ultimaker2,"));
+    lcd_lib_draw_string_centerP(30, PSTR("your DinkyPro,"));
     lcd_lib_draw_string_centerP(40, PSTR("above the arrow."));
     lcd_lib_update_screen();
 }
