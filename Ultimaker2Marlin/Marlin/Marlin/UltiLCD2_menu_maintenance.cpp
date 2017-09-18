@@ -840,21 +840,21 @@ static void lcd_extru_system_details(uint8_t nr)
         if (temp_extrusion_mode == 1)
         {
           if (temp_extrusion_mode == extrusion_mode)
-            strcpy_P(buffer, PSTR("Already in Single mode!"));
+            strcpy_P(buffer, PSTR("Already Single mode!"));
           else
             strcpy_P(buffer, PSTR("Confirm Single mode?"));
         }
         else if (temp_extrusion_mode == 2)
         {
           if (temp_extrusion_mode == extrusion_mode)
-            strcpy_P(buffer, PSTR("Already in Dual mode!"));
+            strcpy_P(buffer, PSTR("Already Dual mode!"));
           else
             strcpy_P(buffer, PSTR("Confirm Dual mode?"));
         }
         else if (temp_extrusion_mode == 3)
         {
           if (temp_extrusion_mode == extrusion_mode)
-            strcpy_P(buffer, PSTR("Already in Triple mode!"));
+            strcpy_P(buffer, PSTR("Already Triple mode!"));
           else
             strcpy_P(buffer, PSTR("Confirm Triple mode?"));
         }
