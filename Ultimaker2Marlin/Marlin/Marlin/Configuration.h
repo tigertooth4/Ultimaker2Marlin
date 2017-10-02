@@ -447,20 +447,21 @@ const bool Z_ENDSTOPS_INVERTING = true; // set to true to invert the logic of th
         #define EXTRUDERS 2 //Maximum possible number of extruders in the setup; So always larger than extrusion_mode variables.
       #endif
 
-    #define LEFT_SWITCH_WAITING_POSITION_X   110
-    #define LEFT_SWITCH_WAITING_POSITION_Y   25
-    #define RIGHT_SWITCH_WAITING_POSITION_X  150
-    #define RIGHT_SWITCH_WAITING_POSITION_Y  150
+    #define LEFT_SWITCH_WAITING_POSITION_X   60
+    #define LEFT_SWITCH_WAITING_POSITION_Y   30
+    #define RIGHT_SWITCH_WAITING_POSITION_X  160
+    #define RIGHT_SWITCH_WAITING_POSITION_Y  26
 
-    #define LEFT_SWITCH_MIDDLE_POSITION_X   80
-    #define LEFT_SWITCH_FINAL_POSITION_X    50
+    #define LEFT_SWITCH_MIDDLE_POSITION_X   20
+    #define LEFT_SWITCH_FINAL_POSITION_X    2
 
-    #define RIGHT_SWITCH_MIDDLE_POSITION_X   180
-    #define RIGHT_SWITCH_FINAL_POSITION_X    200
+    #define RIGHT_SWITCH_MIDDLE_POSITION_X   187
+    #define RIGHT_SWITCH_FINAL_POSITION_X    205
     // Nozzle index:
     //
     //  0 -----  1 ----- 2
     //
+    #define TOOLHEAD_SWITCH_FEEDRATE  800
 
 #endif
 

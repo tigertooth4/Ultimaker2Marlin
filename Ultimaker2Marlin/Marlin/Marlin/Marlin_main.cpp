@@ -2548,32 +2548,80 @@ void process_commands()
           }
         #endif
       #else // Defined ALTER_EXTRUSION_MODE_ON_THE_FLY
+          st_synchronize();
+
           if(extrusion_mode > 1 && tmp_extruder != active_extruder) {
             // Save current position to return to after applying extruder offset
             memcpy(destination, current_position, sizeof(destination));
-            // Offset extruder (By XYZ)
-            int i;
-            for(i = 0; i < 3; i++) {
-              /*current_position[i] = current_position[i] -
-                                     other_extruder_offset[i][active_extruder] +
-                                     other_extruder_offset[i][tmp_extruder];*/
-                if(active_extruder > 0)
-                  current_position[i] -= other_extruder_offset[i][active_extruder-1];
-                if(tmp_extruder > 0)
-                  current_position[i] += other_extruder_offset[i][tmp_extruder - 1];
+            // switch nozzle
+            // uint8_t currentMove = 0;
+            float triggerPosition_x;
+            float triggerReadyPosition_x;
+            float triggerReadyPosition_y;
+
+            // set target position for switch,
+            // also retraction might need!!
+            if(active_extruder < tmp_extruder)
+            // To move to the nozzle with large index, one should go left trigger
+            {
+                triggerReadyPosition_x = (float) LEFT_SWITCH_WAITING_POSITION_X;
+                triggerReadyPosition_y = (float) LEFT_SWITCH_WAITING_POSITION_Y;
+
+                if (tmp_extruder == 1) //switch to middle
+                  triggerPosition_x = (float) LEFT_SWITCH_MIDDLE_POSITION_X;
+                else if (tmp_extruder == 2) //switch to right-most nozzle
+                  triggerPosition_x = (float) LEFT_SWITCH_FINAL_POSITION_X;
             }
+            else if(active_extruder > tmp_extruder)
+            // To move to the nozzle with small index, one should go right trigger
+            {
+                triggerReadyPosition_x = (float) RIGHT_SWITCH_WAITING_POSITION_X;
+                triggerReadyPosition_y = (float) RIGHT_SWITCH_WAITING_POSITION_Y;
+
+                if (tmp_extruder == 1) //switch to middle
+                  triggerPosition_x = (float) RIGHT_SWITCH_MIDDLE_POSITION_X;
+                else if (tmp_extruder == 0) //switch to left-most nozzle
+                  triggerPosition_x = (float) RIGHT_SWITCH_FINAL_POSITION_X;
+            }
+
+            // make the switch move happens
+
+            if (printing_state == PRINT_STATE_NORMAL && movesplanned() < 1)
+            {
+                // move to waiting position
+                plan_buffer_line(triggerReadyPosition_x, triggerReadyPosition_y , current_position[Z_AXIS] , current_position[E_AXIS], feedrate/60, active_extruder);
+
+                // move to switch nozzle, make z-plate down 1 mm, to avoid nozzle-bed collision.
+                plan_buffer_line(triggerPosition_x, triggerReadyPosition_y , current_position[Z_AXIS] , current_position[E_AXIS], feedrate/100, active_extruder);
+
+                // move back to waiting position
+                plan_buffer_line(triggerReadyPosition_x , triggerReadyPosition_y , current_position[Z_AXIS] , current_position[E_AXIS], feedrate/100, active_extruder);
+              //  currentMove = 3;
+            }
+            st_synchronize(); // finish the move
+
+            // Offset extruder (By XYZ)
+/*            int i;
+            for(i = 0; i < 3; i++) {
+                if(active_extruder > 0)
+                  current_position[i] = current_position[i] - other_extruder_offset[i][active_extruder];
+                if(tmp_extruder > 0)
+                  current_position[i] = current_position[i] + other_extruder_offset[i][tmp_extruder];
+            }*/
             // Set the new active extruder and position
             active_extruder = tmp_extruder;
-            plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
-            // Move to the old position if 'F' was in the parameters
-            if(make_move && Stopped == false) {
-               prepare_move();
-            }
+            //plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
+            //// Move to the old position if 'F' was in the parameters
+            //if(make_move && Stopped == false) {
+            //   prepare_move();
+            //}
           }
       #endif
       SERIAL_ECHO_START;
       SERIAL_ECHOPGM(MSG_ACTIVE_EXTRUDER);
       SERIAL_PROTOCOLLN((int)active_extruder);
+      SERIAL_PROTOCOLLN((int)current_position[X_AXIS]);
+      SERIAL_PROTOCOLLN((int)current_position[Y_AXIS]);
     }
   }
   else if (strcmp_P(cmdbuffer[bufindr], PSTR("Electronics_test")) == 0)

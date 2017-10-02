@@ -26,12 +26,12 @@
 #define BED_CENTER_ADJUST_X_M (X_MAX_POS_M/2)
 #define BED_CENTER_ADJUST_Y_M (Y_MAX_LENGTH_M - 10)
 #define BED_CENTER_ADJUST_Z_M 55 // needs to be more for big tool head
-#define BED_LEFT_ADJUST_X_M 30
-#define BED_LEFT_ADJUST_Y_M 25
+#define BED_LEFT_ADJUST_X_M 50
+#define BED_LEFT_ADJUST_Y_M 50
 #define BED_RIGHT_ADJUST_X_M (X_MAX_POS_M - 20)
-#define BED_RIGHT_ADJUST_Y_M 25
+#define BED_RIGHT_ADJUST_Y_M 50
 
-static uint8_t currentStep;
+//static uint8_t currentStep;
 static void lcd_menu_first_run_init_2();
 static void lcd_menu_first_run_init_3();
 
@@ -49,6 +49,7 @@ static void lcd_menu_first_run_third_nozzle_offset_paper();
 static void lcd_menu_first_run_second_nozzle_offset_measurement();
 static void lcd_menu_first_run_third_nozzle_offset_measurment();
 static void lcd_menu_first_run_nozzle_offset_paper_done();
+static void lcd_menu_first_run_nozzle_offset_report();
 #endif
 
 static void lcd_menu_first_run_material_load();
@@ -72,7 +73,7 @@ static void lcd_menu_first_run_print_card_detect();
 static void homeAndParkHeadForCenterAdjustment2()
 {
     add_homeing[Z_AXIS] = 0;
-    enquecommand_P(PSTR("G28 Z0 X0 Y0"));
+    enquecommand_P(PSTR("G28 Z0 X0 Y0")); // Try this in console
     char buffer[32];
     #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
       if(extrusion_mode < 2)  //single extrusion_mode
@@ -83,39 +84,48 @@ static void homeAndParkHeadForCenterAdjustment2()
                                                           int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_Y, BED_CENTER_ADJUST_Y_M)));
             enquecommand(buffer);
       }
-      else  //multiple extrusion_mode: moving on to the left pin to switch to first nozzle then to center adjustment position
+      else  //multiple extrusion_mode: moving on to the right trigger to switch to the leftmost (first) nozzle then to center adjustment position
       {
+          if (printing_state == PRINT_STATE_NORMAL )//&& movesplanned() < 1)
+          {
+              // Move nozzle to trigger right pin, in order to switch nozzle.
 
-          if (printing_state == PRINT_STATE_NORMAL && movesplanned() < 1)
-          {
               // move to waiting position
-              plan_buffer_line(LEFT_SWITCH_WAITING_POSITION_X, LEFT_SWITCH_WAITING_POSITION_Y, current_position[Z_AXIS], current_position[E_AXIS], 100, 0);
-              currentStep = 1;
-          }
-          if (printing_state == PRINT_STATE_NORMAL && currentStep == 1 && movesplanned() < 1)
-          {
+              //plan_buffer_line(RIGHT_SWITCH_WAITING_POSITION_X, RIGHT_SWITCH_WAITING_POSITION_Y, current_position[Z_AXIS], current_position[E_AXIS], 100, active_extruder);
+              sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(homing_feedrate[0]),
+                                                            int(RIGHT_SWITCH_WAITING_POSITION_X),
+                                                            int(RIGHT_SWITCH_WAITING_POSITION_Y));
+                                                            //int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_Z, BED_CENTER_ADJUST_Z_M)));
+              enquecommand(buffer);
               // move to switch nozzle
-              plan_buffer_line(LEFT_SWITCH_FINAL_POSITION_X, LEFT_SWITCH_WAITING_POSITION_Y, current_position[Z_AXIS], current_position[E_AXIS], 60, 0);
-              currentStep = 2;
-          }
-          if (printing_state == PRINT_STATE_NORMAL && currentStep == 2 && movesplanned() < 1)
-          {
+              //plan_buffer_line(RIGHT_SWITCH_FINAL_POSITION_X, RIGHT_SWITCH_WAITING_POSITION_Y, current_position[Z_AXIS], current_position[E_AXIS], 30, active_extruder);
+              sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(TOOLHEAD_SWITCH_FEEDRATE),
+                                                            int(RIGHT_SWITCH_FINAL_POSITION_X),
+                                                            int(RIGHT_SWITCH_WAITING_POSITION_Y));
+                                                            //int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_Z, BED_CENTER_ADJUST_Z_M)));
+              enquecommand(buffer);
               // move to switch nozzle
-              plan_buffer_line(LEFT_SWITCH_WAITING_POSITION_X, LEFT_SWITCH_WAITING_POSITION_Y, current_position[Z_AXIS], current_position[E_AXIS], 100, 0);
-              currentStep = 3;
-          }
-          if (printing_state == PRINT_STATE_NORMAL && currentStep == 3 && movesplanned() < 1)
-          {   // move to headParkCenterPosition
+              //plan_buffer_line(RIGHT_SWITCH_WAITING_POSITION_X, RIGHT_SWITCH_WAITING_POSITION_Y, current_position[Z_AXIS], current_position[E_AXIS], 40, active_extruder);
+              sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(TOOLHEAD_SWITCH_FEEDRATE),
+                                                            int(RIGHT_SWITCH_WAITING_POSITION_X),
+                                                            int(RIGHT_SWITCH_WAITING_POSITION_Y));
+                                                            //int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_Z, BED_CENTER_ADJUST_Z_M)));
+              enquecommand(buffer);
+              // move to ready position
               sprintf_P(buffer, PSTR("G1 F%i Z%i X%i Y%i"), int(homing_feedrate[0]),
                                                             int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_Z, BED_CENTER_ADJUST_Z_M)),
                                                             int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_X, BED_CENTER_ADJUST_X_M)),
                                                             int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_Y, BED_CENTER_ADJUST_Y_M)));
-              currentStep = 0;
+              //currentStep = 0;
               enquecommand(buffer);
+              //st_synchronize();
           }
       }
     #else
-      sprintf_P(buffer, PSTR("G1 F%i Z%i X%i Y%i"), int(homing_feedrate[0]), int(BED_CENTER_ADJUST_Z), int(BED_CENTER_ADJUST_X), int(BED_CENTER_ADJUST_Y));
+      sprintf_P(buffer, PSTR("G1 F%i Z%i X%i Y%i"), int(homing_feedrate[0]),
+                                                    int(BED_CENTER_ADJUST_Z),
+                                                    int(BED_CENTER_ADJUST_X),
+                                                    int(BED_CENTER_ADJUST_Y));
       enquecommand(buffer);
     #endif
 }
@@ -216,32 +226,47 @@ static void homeBed()
 static void changeToSecondNozzleParkHeadToCenter()
 {
   char buffer[32];
-  if (printing_state == PRINT_STATE_NORMAL && movesplanned() < 1)
+  //st_synchronize();
+  if (printing_state == PRINT_STATE_NORMAL )//&& movesplanned() < 1)
   {
+      // switch to relative positioning
+      enquecommand_P(PSTR("G91"));
+      // dropdown 2 milimeters
+      enquecommand_P(PSTR("G1 Z2"));
+      // switch back to absolute Coordinates
+      enquecommand_P(PSTR("G90"));
+
       // move to waiting position
-      plan_buffer_line(RIGHT_SWITCH_WAITING_POSITION_X, RIGHT_SWITCH_WAITING_POSITION_Y, current_position[Z_AXIS], current_position[E_AXIS], 60, 0);
-      currentStep = 1;
-  }
-  if (printing_state == PRINT_STATE_NORMAL && currentStep == 1 && movesplanned() < 1)
-  {
+      //plan_buffer_line(LEFT_SWITCH_WAITING_POSITION_X, LEFT_SWITCH_WAITING_POSITION_Y, current_position[Z_AXIS], current_position[E_AXIS], 60, 0);
+      sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(homing_feedrate[0]),
+                                                    int(LEFT_SWITCH_WAITING_POSITION_X),
+                                                    int(LEFT_SWITCH_WAITING_POSITION_Y));
+                                                    //int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_Z, BED_CENTER_ADJUST_Z_M)));
+      enquecommand(buffer);
       // move to switch nozzle
-      plan_buffer_line(RIGHT_SWITCH_MIDDLE_POSITION_X, RIGHT_SWITCH_WAITING_POSITION_Y, current_position[Z_AXIS], current_position[E_AXIS], 60, 0);
-      currentStep = 2;
-  }
-  if (printing_state == PRINT_STATE_NORMAL && currentStep == 2 && movesplanned() < 1)
-  {
-      // move to switch nozzle
-      plan_buffer_line(RIGHT_SWITCH_WAITING_POSITION_X, RIGHT_SWITCH_WAITING_POSITION_Y, current_position[Z_AXIS], current_position[E_AXIS], 60, 0);
-      currentStep = 3;
-  }
-  if (printing_state == PRINT_STATE_NORMAL && currentStep == 3 && movesplanned() < 1)
-  {   // move to headParkCenterPosition
-      sprintf_P(buffer, PSTR("G1 F%i Z%i X%i Y%i"), int(homing_feedrate[0]),
-                                                    int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_Z, BED_CENTER_ADJUST_Z_M)),
+      //plan_buffer_line(LEFT_SWITCH_MIDDLE_POSITION_X, LEFT_SWITCH_WAITING_POSITION_Y, current_position[Z_AXIS], current_position[E_AXIS], 60, 0);
+      sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(TOOLHEAD_SWITCH_FEEDRATE),
+                                                    int(LEFT_SWITCH_MIDDLE_POSITION_X),
+                                                    int(LEFT_SWITCH_WAITING_POSITION_Y));
+                                                    //int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_Z, BED_CENTER_ADJUST_Z_M)));
+      enquecommand(buffer);
+
+      // move back to waiting position
+      // plan_buffer_line(LEFT_SWITCH_WAITING_POSITION_X, LEFT_SWITCH_WAITING_POSITION_Y, current_position[Z_AXIS], current_position[E_AXIS], 60, 0);
+      sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(TOOLHEAD_SWITCH_FEEDRATE),
+                                                    int(LEFT_SWITCH_WAITING_POSITION_X),
+                                                    int(LEFT_SWITCH_WAITING_POSITION_Y));
+                                                    //int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_Z, BED_CENTER_ADJUST_Z_M)));
+      enquecommand(buffer);
+
+      // move to headParkCenterPosition
+      sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(homing_feedrate[0]),
+                                                    //int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_Z, BED_CENTER_ADJUST_Z_M)),
                                                     int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_X, BED_CENTER_ADJUST_X_M)),
                                                     int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_Y, BED_CENTER_ADJUST_Y_M)));
-      currentStep = 4;
+      //currentStep = 4;
       enquecommand(buffer);
+//      st_synchronize();
       return;
   }
 }
@@ -254,32 +279,48 @@ static void changeToThirdNozzleParkHeadToCenter()
   Config_StoreSettings();
 
   char buffer[32];
-  if (printing_state == PRINT_STATE_NORMAL && movesplanned() < 1)
+
+  //st_synchronize();
+  if (printing_state == PRINT_STATE_NORMAL)// && movesplanned() < 1)
   {
+     // switch to relative positioning
+      enquecommand_P(PSTR("G91"));
+      // dropdown 2 milimeters
+      enquecommand_P(PSTR("G1 Z2"));
+      // switch back to absolute Coordinates
+      enquecommand_P(PSTR("G90"));
+
       // move to waiting position
-      plan_buffer_line(RIGHT_SWITCH_WAITING_POSITION_X, RIGHT_SWITCH_WAITING_POSITION_Y, current_position[Z_AXIS], current_position[E_AXIS], 60, 0);
-      currentStep = 1;
-  }
-  if (printing_state == PRINT_STATE_NORMAL && currentStep == 1 && movesplanned() < 1)
-  {
+      //plan_buffer_line(LEFT_SWITCH_WAITING_POSITION_X, LEFT_SWITCH_WAITING_POSITION_Y, current_position[Z_AXIS], current_position[E_AXIS], 60, 0);
+      sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(homing_feedrate[0]),
+                                                    int(LEFT_SWITCH_WAITING_POSITION_X),
+                                                    int(LEFT_SWITCH_WAITING_POSITION_Y));
+                                                    //int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_Z, BED_CENTER_ADJUST_Z_M)));
+      enquecommand(buffer);
+
       // move to switch nozzle
-      plan_buffer_line(RIGHT_SWITCH_FINAL_POSITION_X, RIGHT_SWITCH_WAITING_POSITION_Y, current_position[Z_AXIS], current_position[E_AXIS], 60, 0);
-      currentStep = 2;
-  }
-  if (printing_state == PRINT_STATE_NORMAL && currentStep == 2 && movesplanned() < 1)
-  {
-      // move to switch nozzle
-      plan_buffer_line(RIGHT_SWITCH_WAITING_POSITION_X, RIGHT_SWITCH_WAITING_POSITION_Y, current_position[Z_AXIS], current_position[E_AXIS], 60, 0);
-      currentStep = 3;
-  }
-  if (printing_state == PRINT_STATE_NORMAL && currentStep == 3 && movesplanned() < 1)
-  {   // move to headParkCenterPosition
-      sprintf_P(buffer, PSTR("G1 F%i Z%i X%i Y%i"), int(homing_feedrate[0]),
-                                                    int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_Z, BED_CENTER_ADJUST_Z_M)),
+      //plan_buffer_line(LEFT_SWITCH_FINAL_POSITION_X, LEFT_SWITCH_WAITING_POSITION_Y, current_position[Z_AXIS], current_position[E_AXIS], 60, 0);
+      sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(TOOLHEAD_SWITCH_FEEDRATE),
+                                                    int(LEFT_SWITCH_FINAL_POSITION_X),
+                                                    int(LEFT_SWITCH_WAITING_POSITION_Y));
+                                                    //int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_Z, BED_CENTER_ADJUST_Z_M)));
+      enquecommand(buffer);
+      // moveback to waiting position
+  //    plan_buffer_line(LEFT_SWITCH_WAITING_POSITION_X, LEFT_SWITCH_WAITING_POSITION_Y, current_position[Z_AXIS], current_position[E_AXIS], 60, 0);
+      sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(TOOLHEAD_SWITCH_FEEDRATE),
+                                                    int(LEFT_SWITCH_WAITING_POSITION_X),
+                                                    int(LEFT_SWITCH_WAITING_POSITION_Y));
+                                                    //int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_Z, BED_CENTER_ADJUST_Z_M)));
+      enquecommand(buffer);
+
+  //   // move to headParkCenterPosition
+      sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(homing_feedrate[0]),
+                                                    //int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_Z, BED_CENTER_ADJUST_Z_M)),
                                                     int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_X, BED_CENTER_ADJUST_X_M)),
                                                     int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_Y, BED_CENTER_ADJUST_Y_M)));
-      currentStep = 4;
+      //currentStep = 4;
       enquecommand(buffer);
+      st_synchronize();
       return;
   }
 }
@@ -289,6 +330,42 @@ static void homeAllStoreSecondNozzleOffsetSettings()
   other_extruder_offset[Z_AXIS][0] = current_position[Z_AXIS];
   // now that we are finished, save the settings to EEPROM
   Config_StoreSettings();
+
+  char buffer[32];
+  if (printing_state == PRINT_STATE_NORMAL )//&& movesplanned() < 1)
+  {
+      // Move nozzle to trigger right pin, in order to switch nozzle.
+      // dropdown bed a little bit, in order to avoid collision.
+      enquecommand_P(PSTR("G91"));
+      // dropdown 2 milimeters
+      enquecommand_P(PSTR("G1 Z2"));
+      // switch back to absolute Coordinates
+      enquecommand_P(PSTR("G90"));
+
+      // move to waiting position
+      sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(homing_feedrate[0]),
+                                                    int(RIGHT_SWITCH_WAITING_POSITION_X),
+                                                    int(RIGHT_SWITCH_WAITING_POSITION_Y));
+      enquecommand(buffer);
+      // move to switch nozzle
+      sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(TOOLHEAD_SWITCH_FEEDRATE),
+                                                    int(RIGHT_SWITCH_FINAL_POSITION_X),
+                                                    int(RIGHT_SWITCH_WAITING_POSITION_Y));
+      enquecommand(buffer);
+      // move to switch nozzle
+      sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(TOOLHEAD_SWITCH_FEEDRATE),
+                                                    int(RIGHT_SWITCH_WAITING_POSITION_X),
+                                                    int(RIGHT_SWITCH_WAITING_POSITION_Y));
+      enquecommand(buffer);
+      // move to ready position
+      sprintf_P(buffer, PSTR("G1 F%i Z%i X%i Y%i"), int(homing_feedrate[0]),
+                                                    int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_Z, BED_CENTER_ADJUST_Z_M)),
+                                                    int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_X, BED_CENTER_ADJUST_X_M)),
+                                                    int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_Y, BED_CENTER_ADJUST_Y_M)));
+      enquecommand(buffer);
+      //st_synchronize();
+  }
+
   enquecommand_P(PSTR("G28"));
 }
 
@@ -351,12 +428,13 @@ static void lcd_menu_first_run_init_3()
 //Started bed leveling from the calibration menu
 void lcd_menu_first_run_start_bed_leveling()
 {
-    lcd_question_screen(lcd_menu_first_run_bed_level_center_adjust, homeAndParkHeadForCenterAdjustment2, PSTR("CONTINUE"), lcd_menu_main, NULL, PSTR("CANCEL"));
+    /*lcd_question_screen(lcd_menu_first_run_bed_level_center_adjust, homeAndParkHeadForCenterAdjustment2, PSTR("CONTINUE"), lcd_menu_main, NULL, PSTR("CANCEL"));
     lcd_lib_draw_string_centerP(10, PSTR("I will guide you"));
     lcd_lib_draw_string_centerP(20, PSTR("through the process"));
     lcd_lib_draw_string_centerP(30, PSTR("of adjusting your"));
     lcd_lib_draw_string_centerP(40, PSTR("buildplate."));
-    lcd_lib_update_screen();
+    lcd_lib_update_screen();*/
+    lcd_menu_first_run_nozzle_offset_report();
 }
 
 
@@ -501,15 +579,16 @@ static void lcd_menu_first_run_bed_level_paper_right()
 static void lcd_menu_first_run_second_nozzle_offset_paper()
 {
     SELECT_MAIN_MENU_ITEM(0);
-    if (currentStep == 4 && movesplanned() < 1) // supposed moves are all executed
-        lcd_question_screen(lcd_menu_first_run_second_nozzle_offset_measurement, NULL, PSTR("CONTINUE"), lcd_menu_main, homeBed, PSTR("ABORT"));
-    else
-        lcd_info_screen(lcd_menu_main, homeBed, PSTR("ABORT"));
+    //if (movesplanned() < 1) // supposed moves are all executed
+    lcd_info_screen(lcd_menu_first_run_second_nozzle_offset_measurement, NULL, PSTR("CONTINUE"));
+        //lcd_question_screen(lcd_menu_first_run_second_nozzle_offset_measurement, NULL, PSTR("CONTINUE"), lcd_menu_main, homeBed, PSTR("ABORT"));
+    //else
+    //    lcd_info_screen(lcd_menu_main, homeBed, PSTR("ABORT"));
     DRAW_PROGRESS_NR_IF_NOT_DONE(11);
-    lcd_lib_draw_string_centerP(10, PSTR("I'm changing to"));
-    lcd_lib_draw_string_centerP(20, PSTR("nozzle 2 (middle one)..."));
-    lcd_lib_draw_string_centerP(30, PSTR("Please use paper to"));
-    lcd_lib_draw_string_centerP(40, PSTR("fine-tune the distance."));
+    lcd_lib_draw_string_centerP(10, PSTR("Changing to nozzle 2"));
+    lcd_lib_draw_string_centerP(20, PSTR("Next please use paper"));
+    lcd_lib_draw_string_centerP(30, PSTR("to fine-tune the"));
+    lcd_lib_draw_string_centerP(40, PSTR("distance."));
     lcd_lib_update_screen();
 
 }
@@ -548,15 +627,15 @@ static void lcd_menu_first_run_second_nozzle_offset_measurement()
 static void lcd_menu_first_run_third_nozzle_offset_paper()
 {
     SELECT_MAIN_MENU_ITEM(0);
-    if (currentStep == 4 && movesplanned() < 1) // supposed moves are all executed
+    if (movesplanned() < 1) // supposed moves are all executed
         lcd_question_screen(lcd_menu_first_run_third_nozzle_offset_measurment, NULL, PSTR("CONTINUE"), lcd_menu_main, homeBed, PSTR("ABORT"));
     else
         lcd_info_screen(lcd_menu_main, homeBed, PSTR("ABORT"));
     DRAW_PROGRESS_NR_IF_NOT_DONE(13);
-    lcd_lib_draw_string_centerP(10, PSTR("I'm changing to"));
-    lcd_lib_draw_string_centerP(20, PSTR("nozzle 3..."));
-    lcd_lib_draw_string_centerP(30, PSTR("Please use paper to"));
-    lcd_lib_draw_string_centerP(40, PSTR("fine-tune the distance."));
+    lcd_lib_draw_string_centerP(10, PSTR("Changing to nozzle 3"));
+    lcd_lib_draw_string_centerP(20, PSTR("Please use paper to"));
+    lcd_lib_draw_string_centerP(30, PSTR("fine-tune the"));
+    lcd_lib_draw_string_centerP(40, PSTR("distance."));
     lcd_lib_update_screen();
 
 }
@@ -593,23 +672,48 @@ static void lcd_menu_first_run_third_nozzle_offset_measurment()
 static void lcd_menu_first_run_nozzle_offset_paper_done()
 {
   SELECT_MAIN_MENU_ITEM(0);
-  lcd_info_screen(lcd_menu_main, NULL, PSTR("DONE"));
-  //DRAW_PROGRESS_NR_IF_NOT_DONE(13);
-  //Report the nozzle offset settings:
-  char buffer[32];
-  lcd_lib_draw_string_centerP(10, PSTR("Offset Report:"));
-  lcd_lib_draw_string_centerP(20, PSTR("Nozzle 1:  0.0"));
+  if (movesplanned() > 0)
+    lcd_info_screen(NULL, NULL, PSTR("Please wait.."));
+  else
+    lcd_info_screen(lcd_menu_first_run_nozzle_offset_report, NULL, PSTR("See Report"));
+  DRAW_PROGRESS_NR_IF_NOT_DONE(15);
 
-  sprintf_P(buffer, PSTR("Nozzle 2:  %f"), float(other_extruder_offset[Z_AXIS][0]));
-  lcd_lib_draw_string_centerP(30, buffer);
-
-  sprintf_P(buffer, PSTR("Nozzle 3:  %f"), float(other_extruder_offset[Z_AXIS][1]));
-  lcd_lib_draw_string_centerP(40, buffer);
-
+  lcd_lib_draw_string_centerP(10, PSTR("Bed leveling done,"));
+  lcd_lib_draw_string_centerP(20, PSTR("I am changing back"));
+  lcd_lib_draw_string_centerP(30, PSTR("to first nozzle."));
   lcd_lib_update_screen();
 
 }
 
+static void lcd_menu_first_run_nozzle_offset_report()
+{
+  SELECT_MAIN_MENU_ITEM(0);
+  lcd_info_screen(lcd_menu_main, NULL, PSTR("DONE"));
+  //DRAW_PROGRESS_NR_IF_NOT_DONE(16);
+  //Report the nozzle offset settings:
+  lcd_lib_draw_string_centerP(10, PSTR("Offset Report"));
+
+
+  char buffer[32];
+  char* c = buffer;
+  //lcd_lib_clear();
+  //lcd_lib_draw_vline(64, 5, 45);
+  //lcd_lib_draw_hline(3, 124, 20);
+  strcpy_P(buffer, PSTR("Nozzle 2:  "));
+  c += 10;
+  c = float_to_string(other_extruder_offset[Z_AXIS][0], c, PSTR("mm"));
+  lcd_lib_draw_string(10, 20, buffer);
+
+
+  if (extrusion_mode > 2){
+    c = buffer;
+    strcpy_P(buffer, PSTR("Nozzle 3:  "));
+    c += 10;
+    c = float_to_string(other_extruder_offset[Z_AXIS][1], c, PSTR("mm"));
+    lcd_lib_draw_string(10, 30, buffer);
+  }
+  lcd_lib_update_screen();
+}
 
 #endif
 
@@ -621,7 +725,7 @@ static void lcd_menu_first_run_material_load()
     SELECT_MAIN_MENU_ITEM(0);
     lcd_info_screen(lcd_menu_first_run_material_select_1, parkHeadForHeating, PSTR("CONTINUE"));
     DRAW_PROGRESS_NR(11);
-    lcd_lib_draw_string_centerP(10, PSTR("Now that we leveled"));
+    lcd_lib_draw_string_centerP(10, PSTR("Now we leveled"));
     lcd_lib_draw_string_centerP(20, PSTR("the buildplate"));
     lcd_lib_draw_string_centerP(30, PSTR("the next step is"));
     lcd_lib_draw_string_centerP(40, PSTR("to insert material."));
@@ -742,7 +846,7 @@ static void lcd_menu_first_run_material_load_heatup()
     lcd_basic_screen();
     DRAW_PROGRESS_NR(16);
     lcd_lib_draw_string_centerP(10, PSTR("Please wait,"));
-    lcd_lib_draw_string_centerP(20, PSTR("printhead heating for"));
+    lcd_lib_draw_string_centerP(20, PSTR("nozzle heating for"));
     lcd_lib_draw_string_centerP(30, PSTR("material loading"));
 
     lcd_progressbar(progress);

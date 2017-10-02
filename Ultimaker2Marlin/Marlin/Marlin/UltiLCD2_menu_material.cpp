@@ -29,6 +29,9 @@ struct materialSettings material[EXTRUDERS];
 static menuFunc_t post_change_material_menu;
 static unsigned long preheat_end_time;
 
+#define MATERIAL_CHANGE_SINGLE_NOZZLE_HEAD_POSITION_Y 10
+#define MATERIAL_CHANGE_MULTIPLE_NOZZLE_HEAD_POSITION_Y 50
+
 void doCooldown();//TODO
 static void lcd_menu_material_main();
 static void lcd_menu_change_material_preheat();
@@ -66,6 +69,7 @@ void lcd_menu_material()
             if (IS_SELECTED_MAIN(0))
             {
                 active_extruder = 0;
+                // here T g-code command maybe needed
                 lcd_change_to_menu(lcd_menu_material_main);
             }
             else if (IS_SELECTED_MAIN(1))
@@ -129,7 +133,7 @@ static void lcd_menu_material_main()
             minProgress = 0;
             char buffer[32];
             enquecommand_P(PSTR("G28 X0 Y0"));
-            sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(homing_feedrate[0]), int(X_MAX_LENGTH/2), 10);
+            sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(homing_feedrate[0]), int(X_MAX_LENGTH/2), CHOOSE_BY_EXTRUSION_MODE(MATERIAL_CHANGE_SINGLE_NOZZLE_HEAD_POSITION_Y, MATERIAL_CHANGE_MULTIPLE_NOZZLE_HEAD_POSITION_Y));//10);
             enquecommand(buffer);
             lcd_change_to_menu_change_material(lcd_menu_material_main_return);
         }
