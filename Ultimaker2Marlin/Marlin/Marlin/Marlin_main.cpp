@@ -2598,6 +2598,8 @@ void process_commands()
                 plan_buffer_line(triggerReadyPosition_x , triggerReadyPosition_y , current_position[Z_AXIS] , current_position[E_AXIS], feedrate/100, active_extruder);
               //  currentMove = 3;
             }
+            current_position[X_AXIS] = triggerReadyPosition_x;
+            current_position[Y_AXIS] = triggerReadyPosition_y;
             st_synchronize(); // finish the move
 
             // Offset extruder (By XYZ)
