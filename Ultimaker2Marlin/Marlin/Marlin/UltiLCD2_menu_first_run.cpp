@@ -15,22 +15,6 @@
 // NOTE that for single and multiple toolheads, the X_MAX_POS and Y_MAX_LENGTH
 // should be different!!
 
-#define BED_CENTER_ADJUST_X (X_MAX_POS/2)
-#define BED_CENTER_ADJUST_Y (Y_MAX_LENGTH - 10)
-#define BED_CENTER_ADJUST_Z 35
-#define BED_LEFT_ADJUST_X 10
-#define BED_LEFT_ADJUST_Y 20
-#define BED_RIGHT_ADJUST_X (X_MAX_POS - 10)
-#define BED_RIGHT_ADJUST_Y 20
-
-#define BED_CENTER_ADJUST_X_M (X_MAX_POS_M/2)
-#define BED_CENTER_ADJUST_Y_M (Y_MAX_LENGTH_M - 10)
-#define BED_CENTER_ADJUST_Z_M 55 // needs to be more for big tool head
-#define BED_LEFT_ADJUST_X_M 50
-#define BED_LEFT_ADJUST_Y_M 50
-#define BED_RIGHT_ADJUST_X_M (X_MAX_POS_M - 20)
-#define BED_RIGHT_ADJUST_Y_M 50
-
 //static uint8_t currentStep;
 static void lcd_menu_first_run_init_2();
 static void lcd_menu_first_run_init_3();
@@ -428,13 +412,13 @@ static void lcd_menu_first_run_init_3()
 //Started bed leveling from the calibration menu
 void lcd_menu_first_run_start_bed_leveling()
 {
-    /*lcd_question_screen(lcd_menu_first_run_bed_level_center_adjust, homeAndParkHeadForCenterAdjustment2, PSTR("CONTINUE"), lcd_menu_main, NULL, PSTR("CANCEL"));
+    lcd_question_screen(lcd_menu_first_run_bed_level_center_adjust, homeAndParkHeadForCenterAdjustment2, PSTR("CONTINUE"), lcd_menu_main, NULL, PSTR("CANCEL"));
     lcd_lib_draw_string_centerP(10, PSTR("I will guide you"));
     lcd_lib_draw_string_centerP(20, PSTR("through the process"));
     lcd_lib_draw_string_centerP(30, PSTR("of adjusting your"));
     lcd_lib_draw_string_centerP(40, PSTR("buildplate."));
-    lcd_lib_update_screen();*/
-    lcd_menu_first_run_nozzle_offset_report();
+    lcd_lib_update_screen();
+    //lcd_menu_first_run_nozzle_offset_report();
 }
 
 
