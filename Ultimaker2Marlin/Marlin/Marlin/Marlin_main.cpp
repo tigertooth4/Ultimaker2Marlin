@@ -2596,25 +2596,35 @@ void process_commands()
                   nozzle_offset_z = other_extruder_offset[Z_AXIS][tmp_extruder -1] - other_extruder_offset[Z_AXIS][active_extruder - 1];
             }
 
-            triggerPosition_z = current_position[Z_AXIS] > BED_CENTER_ADJUST_Z_M ? current_position[Z_AXIS] : (current_position[Z_AXIS] + 5);
-            //nozzle_offset_z = tmp_extruder > 0 ? other_extruder_offset[Z_AXIS][tmp_extruder -1] : - other_extruder_offset[Z_AXIS][active_extruder-1];
+            //triggerPosition_z = current_position[Z_AXIS] > BED_CENTER_ADJUST_Z_M ? current_position[Z_AXIS] : (current_position[Z_AXIS] + 3);
+            triggerPosition_z = (current_position[Z_AXIS] + 3) < (base_home_pos(Z_AXIS) + add_homeing[Z_AXIS]) ? (current_position[Z_AXIS] + 3) : current_position[Z_AXIS] ;
 
             // make the switch move happens
             if (printing_state == PRINT_STATE_NORMAL && movesplanned() < 1)
             {
+                // move down bed a little bit, avoid collision
+                plan_buffer_line(current_position[X_AXIS], current_position[Y_AXIS], triggerPosition_z, current_position[E_AXIS], feedrate/60, active_extruder);
+
                 // move to waiting position
-                // in order to avoid collision, make sure the Z_plate is out of dangerous zone : i.e. Z position > bed_leveling z start position
                 plan_buffer_line(triggerReadyPosition_x, triggerReadyPosition_y , triggerPosition_z , current_position[E_AXIS], feedrate/60, active_extruder);
 
-                // move to switch nozzle, make z-plate down a little bit, say 5mm, to avoid nozzle-bed collision.
+                // move to switch nozzle
                 plan_buffer_line(triggerPosition_x, triggerReadyPosition_y , triggerPosition_z , current_position[E_AXIS], feedrate/100, active_extruder);
 
                 // move back to waiting position
-                plan_buffer_line(triggerReadyPosition_x , triggerReadyPosition_y , current_position[Z_AXIS] + nozzle_offset_z , current_position[E_AXIS], feedrate/100, active_extruder);
-              //  currentMove = 3;
+                plan_buffer_line(triggerReadyPosition_x, triggerReadyPosition_y, triggerPosition_z, current_position[E_AXIS], feedrate/100, active_extruder);
+
+                if (destination[Z_AXIS] + nozzle_offset_z < base_home_pos(Z_AXIS) + add_homeing[Z_AXIS] )
+                  //destination[Z_AXIS] = destination[Z_AXIS] + nozzle_offset_z;
+                  plan_buffer_line(triggerReadyPosition_x , triggerReadyPosition_y , destination[Z_AXIS] + nozzle_offset_z , current_position[E_AXIS], feedrate/100, active_extruder);
+                else
+                  plan_buffer_line(triggerReadyPosition_x , triggerReadyPosition_y , destination[Z_AXIS] , current_position[E_AXIS], feedrate/100, active_extruder);
             }
             current_position[X_AXIS] = triggerReadyPosition_x;
             current_position[Y_AXIS] = triggerReadyPosition_y;
+            // cheat the print to remember the z-position as usual, no offset is remembered.
+            current_position[Z_AXIS] = destination[Z_AXIS];
+
             st_synchronize(); // finish the move
 
             // Set the new active extruder and position
@@ -2624,8 +2634,8 @@ void process_commands()
       SERIAL_ECHO_START;
       SERIAL_ECHOPGM(MSG_ACTIVE_EXTRUDER);
       SERIAL_PROTOCOLLN((int)active_extruder);
-      SERIAL_PROTOCOLLN((int)current_position[X_AXIS]);
-      SERIAL_PROTOCOLLN((int)current_position[Y_AXIS]);
+      // SERIAL_PROTOCOLLN((int)current_position[X_AXIS]);
+      // SERIAL_PROTOCOLLN((int)current_position[Y_AXIS]);
     }
   }
   else if (strcmp_P(cmdbuffer[bufindr], PSTR("Electronics_test")) == 0)
