@@ -1848,22 +1848,22 @@ void process_commands()
                   if(code_seen('T') && code_value() >= 0 && code_value() < extrusion_mode)
                   {
                       extruder_num = code_value();
-                      if(code_seen('X'))
+                      if(code_seen('X') && extruder_num > 0)
                       {
-                        other_extruder_offset[X_AXIS][extruder_num] = code_value();
+                        other_extruder_offset[X_AXIS][extruder_num-1] = code_value();
                       }
-                      if(code_seen('Y'))
+                      if(code_seen('Y') && extruder_num > 0)
                       {
-                        other_extruder_offset[Y_AXIS][extruder_num] = code_value();
+                        other_extruder_offset[Y_AXIS][extruder_num-1] = code_value();
                       }
-                      if(code_seen('Z'))
+                      if(code_seen('Z') && extruder_num > 0)
                       {
-                        other_extruder_offset[Z_AXIS][extruder_num] = code_value();
+                        other_extruder_offset[Z_AXIS][extruder_num-1] = code_value();
                       }
                 }
                   SERIAL_ECHO_START;
                   SERIAL_ECHOPGM(MSG_HOTEND_OFFSET);
-                  for(tmp_extruder = 0; tmp_extruder < extrusion_mode
+                  for(tmp_extruder = 0; tmp_extruder < extrusion_mode - 1
                     // #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
                     //   && tmp_extruder < extrusion_mode
                     // #endif
@@ -2552,13 +2552,14 @@ void process_commands()
 
           if(extrusion_mode > 1 && tmp_extruder != active_extruder) {
             // Save current position to return to after applying extruder offset
-            memcpy(destination, current_position, sizeof(destination));
+            // memcpy(destination, current_position, sizeof(destination));
             // switch nozzle
             // uint8_t currentMove = 0;
             float triggerPosition_x;
             float triggerReadyPosition_x;
             float triggerReadyPosition_y;
             float triggerPosition_z;
+            float restorePosition_z = current_position[Z_AXIS];
             float nozzle_offset_z = 0.0;
 
             // set target position for switch,
@@ -2614,16 +2615,16 @@ void process_commands()
                 // move back to waiting position
                 plan_buffer_line(triggerReadyPosition_x, triggerReadyPosition_y, triggerPosition_z, current_position[E_AXIS], feedrate/100, active_extruder);
 
-                if (destination[Z_AXIS] + nozzle_offset_z < base_home_pos(Z_AXIS) + add_homeing[Z_AXIS] )
+                if (restorePosition_z + nozzle_offset_z < base_home_pos(Z_AXIS) + add_homeing[Z_AXIS] )
                   //destination[Z_AXIS] = destination[Z_AXIS] + nozzle_offset_z;
-                  plan_buffer_line(triggerReadyPosition_x , triggerReadyPosition_y , destination[Z_AXIS] + nozzle_offset_z , current_position[E_AXIS], feedrate/100, active_extruder);
+                  plan_buffer_line(triggerReadyPosition_x , triggerReadyPosition_y , restorePosition_z + nozzle_offset_z , current_position[E_AXIS], feedrate/100, active_extruder);
                 else
-                  plan_buffer_line(triggerReadyPosition_x , triggerReadyPosition_y , destination[Z_AXIS] , current_position[E_AXIS], feedrate/100, active_extruder);
+                  plan_buffer_line(triggerReadyPosition_x , triggerReadyPosition_y , restorePosition_z , current_position[E_AXIS], feedrate/100, active_extruder);
             }
             current_position[X_AXIS] = triggerReadyPosition_x;
             current_position[Y_AXIS] = triggerReadyPosition_y;
             // cheat the print to remember the z-position as usual, no offset is remembered.
-            current_position[Z_AXIS] = destination[Z_AXIS];
+            current_position[Z_AXIS] = restorePosition_z;
 
             st_synchronize(); // finish the move
 
