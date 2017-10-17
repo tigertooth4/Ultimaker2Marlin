@@ -2598,7 +2598,7 @@ void process_commands()
             }
 
             //triggerPosition_z = current_position[Z_AXIS] > BED_CENTER_ADJUST_Z_M ? current_position[Z_AXIS] : (current_position[Z_AXIS] + 3);
-            triggerPosition_z = (current_position[Z_AXIS] + 3) < (base_home_pos(Z_AXIS) + add_homeing[Z_AXIS]) ? (current_position[Z_AXIS] + 3) : current_position[Z_AXIS] ;
+            triggerPosition_z = (current_position[Z_AXIS] + 3.0) < (base_home_pos(Z_AXIS) + add_homeing[Z_AXIS]) ? (current_position[Z_AXIS] + 3.0) : current_position[Z_AXIS] ;
 
             // make the switch move happens
             if (printing_state == PRINT_STATE_NORMAL && movesplanned() < 1)
@@ -2625,6 +2625,7 @@ void process_commands()
             current_position[Y_AXIS] = triggerReadyPosition_y;
             // cheat the print to remember the z-position as usual, no offset is remembered.
             current_position[Z_AXIS] = restorePosition_z;
+            plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
 
             st_synchronize(); // finish the move
 
