@@ -2548,19 +2548,23 @@ void process_commands()
           }
         #endif
       #else // Defined ALTER_EXTRUSION_MODE_ON_THE_FLY
+          // offsetXY is used to determine whether offset XY is needed or not
+          boolean needOffsetXY = true;
+          if (code_seen('N'))  needOffsetXY = false;
+
           st_synchronize();
 
           if(extrusion_mode > 1 && tmp_extruder != active_extruder) {
-            // Save current position to return to after applying extruder offset
-            // memcpy(destination, current_position, sizeof(destination));
             // switch nozzle
-            // uint8_t currentMove = 0;
             float triggerPosition_x;
             float triggerReadyPosition_x;
             float triggerReadyPosition_y;
             float triggerPosition_z;
-            float restorePosition_z = current_position[Z_AXIS];
-            float nozzle_offset_z = 0.0;
+            float restorePosition[3];
+
+            for(int i=0; i<3; i++) restorePosition[i] =  current_position[i];
+            //float nozzle_offset_z = 0.0;
+            float nozzle_offset[3] = {0.0, 0.0, 0.0}; // X,Y,Z offset of current nozzle
 
             // set target position for switch,
             // also retraction might need!!
@@ -2576,9 +2580,11 @@ void process_commands()
                   triggerPosition_x = (float) LEFT_SWITCH_FINAL_POSITION_X;
 
                 if (active_extruder == 0)
-                  nozzle_offset_z = other_extruder_offset[Z_AXIS][tmp_extruder -1];
+                  //for(int i=0; i<3; i++)
+                  nozzle_offset[Z_AXIS] = other_extruder_offset[Z_AXIS][tmp_extruder -1];
                 else
-                  nozzle_offset_z = other_extruder_offset[Z_AXIS][tmp_extruder -1] - other_extruder_offset[Z_AXIS][active_extruder-1];
+                  //for(int i=0; i<3; i++)
+                  nozzle_offset[Z_AXIS] = other_extruder_offset[Z_AXIS][tmp_extruder -1] - other_extruder_offset[Z_AXIS][active_extruder-1];
             }
             else if(active_extruder > tmp_extruder)
             // To move to the nozzle with small index, one should go right trigger
@@ -2592,9 +2598,11 @@ void process_commands()
                   triggerPosition_x = (float) RIGHT_SWITCH_FINAL_POSITION_X;
 
                 if (tmp_extruder == 0)
-                  nozzle_offset_z = - other_extruder_offset[Z_AXIS][active_extruder - 1];
+                  //for(int i=0; i<3; i++)
+                  nozzle_offset[Z_AXIS] = - other_extruder_offset[Z_AXIS][active_extruder - 1];
                 else
-                  nozzle_offset_z = other_extruder_offset[Z_AXIS][tmp_extruder -1] - other_extruder_offset[Z_AXIS][active_extruder - 1];
+                  //for(int i=0; i<3; i++)
+                  nozzle_offset[Z_AXIS] = other_extruder_offset[Z_AXIS][tmp_extruder -1] - other_extruder_offset[Z_AXIS][active_extruder - 1];
             }
 
             //triggerPosition_z = current_position[Z_AXIS] > BED_CENTER_ADJUST_Z_M ? current_position[Z_AXIS] : (current_position[Z_AXIS] + 3);
@@ -2603,28 +2611,36 @@ void process_commands()
             // make the switch move happens
             if (printing_state == PRINT_STATE_NORMAL && movesplanned() < 1)
             {
+                if (active_extruder > 0 && needOffsetXY)
+                  // if current extruder is not 0, and offsetXY is needed, we have to reverse offset XY of the toolheads, before hit the trigger position
+                  for(int i=0; i<2; i++) nozzle_offset[i] = -other_extruder_offset[i][active_extruder-1];
+
                 // move down bed a little bit, avoid collision
-                plan_buffer_line(current_position[X_AXIS], current_position[Y_AXIS], triggerPosition_z, current_position[E_AXIS], feedrate/60, active_extruder);
+                // offset XY at the same time
+                plan_buffer_line(current_position[X_AXIS] + nozzle_offset[X_AXIS], current_position[Y_AXIS] + nozzle_offset[Y_AXIS], triggerPosition_z, current_position[E_AXIS], feedrate/60, active_extruder);
 
                 // move to waiting position
-                plan_buffer_line(triggerReadyPosition_x, triggerReadyPosition_y , triggerPosition_z , current_position[E_AXIS], feedrate/60, active_extruder);
+                plan_buffer_line(triggerReadyPosition_x + nozzle_offset[X_AXIS], triggerReadyPosition_y + nozzle_offset[Y_AXIS], triggerPosition_z , current_position[E_AXIS], feedrate/60, active_extruder);
 
                 // move to switch nozzle
-                plan_buffer_line(triggerPosition_x, triggerReadyPosition_y , triggerPosition_z , current_position[E_AXIS], feedrate/100, active_extruder);
+                plan_buffer_line(triggerPosition_x + nozzle_offset[X_AXIS], triggerReadyPosition_y  + nozzle_offset[Y_AXIS], triggerPosition_z , current_position[E_AXIS], feedrate/100, active_extruder);
 
                 // move back to waiting position
-                plan_buffer_line(triggerReadyPosition_x, triggerReadyPosition_y, triggerPosition_z, current_position[E_AXIS], feedrate/100, active_extruder);
+                plan_buffer_line(triggerReadyPosition_x  + nozzle_offset[X_AXIS], triggerReadyPosition_y + nozzle_offset[Y_AXIS], triggerPosition_z, current_position[E_AXIS], feedrate/100, active_extruder);
 
-                if (restorePosition_z + nozzle_offset_z < base_home_pos(Z_AXIS) + add_homeing[Z_AXIS] )
+                if (tmp_extruder > 0 && needOffsetXY)
+                  for(int i=0; i<2; i++) nozzle_offset[i] = nozzle_offset[i] + other_extruder_offset[i][tmp_extruder - 1];
+
+                if (restorePosition[Z_AXIS] + nozzle_offset[Z_AXIS] < base_home_pos(Z_AXIS) + add_homeing[Z_AXIS] )
                   //destination[Z_AXIS] = destination[Z_AXIS] + nozzle_offset_z;
-                  plan_buffer_line(triggerReadyPosition_x , triggerReadyPosition_y , restorePosition_z + nozzle_offset_z , current_position[E_AXIS], feedrate/100, active_extruder);
+                  plan_buffer_line(triggerReadyPosition_x + nozzle_offset[X_AXIS], triggerReadyPosition_y + nozzle_offset[Y_AXIS], restorePosition[Z_AXIS] + nozzle_offset[Z_AXIS] , current_position[E_AXIS], feedrate/100, active_extruder);
                 else
-                  plan_buffer_line(triggerReadyPosition_x , triggerReadyPosition_y , restorePosition_z , current_position[E_AXIS], feedrate/100, active_extruder);
+                  plan_buffer_line(triggerReadyPosition_x + nozzle_offset[X_AXIS], triggerReadyPosition_y + nozzle_offset[Y_AXIS] , restorePosition[Z_AXIS] , current_position[E_AXIS], feedrate/100, active_extruder);
             }
             current_position[X_AXIS] = triggerReadyPosition_x;
             current_position[Y_AXIS] = triggerReadyPosition_y;
             // cheat the print to remember the z-position as usual, no offset is remembered.
-            current_position[Z_AXIS] = restorePosition_z;
+            current_position[Z_AXIS] = restorePosition[Z_AXIS];
             plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
 
             st_synchronize(); // finish the move
