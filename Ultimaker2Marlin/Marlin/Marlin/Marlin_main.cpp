@@ -2626,21 +2626,21 @@ void process_commands()
                 plan_buffer_line(current_position[X_AXIS] + nozzle_offset[X_AXIS], current_position[Y_AXIS] + nozzle_offset[Y_AXIS], triggerPosition_z, current_position[E_AXIS], feedrate/60, active_extruder);
 
                 // move to waiting position
-                plan_buffer_line(triggerReadyPosition_x + nozzle_offset[X_AXIS], triggerReadyPosition_y + nozzle_offset[Y_AXIS], triggerPosition_z , current_position[E_AXIS], feedrate/60, active_extruder);
+                plan_buffer_line(triggerReadyPosition_x + nozzle_offset[X_AXIS], triggerReadyPosition_y + nozzle_offset[Y_AXIS], triggerPosition_z , current_position[E_AXIS], TOOLHEAD_SWITCH_FEEDRATE, active_extruder);//feedrate/60, active_extruder);
 
                 // move to switch nozzle
-                plan_buffer_line(triggerPosition_x + nozzle_offset[X_AXIS], triggerReadyPosition_y  + nozzle_offset[Y_AXIS], triggerPosition_z , current_position[E_AXIS], feedrate/100, active_extruder);
+                plan_buffer_line(triggerPosition_x + nozzle_offset[X_AXIS], triggerReadyPosition_y  + nozzle_offset[Y_AXIS], triggerPosition_z , current_position[E_AXIS], TOOLHEAD_SWITCH_FEEDRATE/2, active_extruder);//feedrate/100, active_extruder);
 
                 // move back to waiting position
-                plan_buffer_line(triggerReadyPosition_x  + nozzle_offset[X_AXIS], triggerReadyPosition_y + nozzle_offset[Y_AXIS], triggerPosition_z, current_position[E_AXIS], feedrate/100, active_extruder);
+                plan_buffer_line(triggerReadyPosition_x  + nozzle_offset[X_AXIS], triggerReadyPosition_y + nozzle_offset[Y_AXIS], triggerPosition_z, current_position[E_AXIS], TOOLHEAD_SWITCH_FEEDRATE, active_extruder);//feedrate/100, active_extruder);
 
                 if (tmp_extruder > 0 && needOffsetXY)
                   for(int i=0; i<2; i++) nozzle_offset[i] = nozzle_offset[i] - other_extruder_offset[i][tmp_extruder - 1];
 
                 if (restorePosition[Z_AXIS] + nozzle_offset[Z_AXIS] < base_home_pos(Z_AXIS) + add_homeing[Z_AXIS] )
-                  plan_buffer_line(triggerReadyPosition_x + nozzle_offset[X_AXIS], triggerReadyPosition_y + nozzle_offset[Y_AXIS], restorePosition[Z_AXIS] + nozzle_offset[Z_AXIS] , current_position[E_AXIS], feedrate/100, active_extruder);
+                  plan_buffer_line(triggerReadyPosition_x + nozzle_offset[X_AXIS], triggerReadyPosition_y + nozzle_offset[Y_AXIS], restorePosition[Z_AXIS] + nozzle_offset[Z_AXIS] , current_position[E_AXIS], TOOLHEAD_SWITCH_FEEDRATE, active_extruder);//feedrate/100, active_extruder);
                 else
-                  plan_buffer_line(triggerReadyPosition_x + nozzle_offset[X_AXIS], triggerReadyPosition_y + nozzle_offset[Y_AXIS] , restorePosition[Z_AXIS] , current_position[E_AXIS], feedrate/100, active_extruder);
+                  plan_buffer_line(triggerReadyPosition_x + nozzle_offset[X_AXIS], triggerReadyPosition_y + nozzle_offset[Y_AXIS] , restorePosition[Z_AXIS] , current_position[E_AXIS], TOOLHEAD_SWITCH_FEEDRATE, active_extruder);//feedrate/100, active_extruder);
             }
             current_position[X_AXIS] = triggerReadyPosition_x;
             current_position[Y_AXIS] = triggerReadyPosition_y;

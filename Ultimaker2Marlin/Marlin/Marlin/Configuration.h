@@ -397,7 +397,7 @@ const bool Z_ENDSTOPS_INVERTING = true; // set to true to invert the logic of th
 #define DEFAULT_EJERK                 5.0    // (mm/sec)
 
 //Length of the bowden tube. Used for the material load/unload procedure.
-#define FILAMANT_BOWDEN_LENGTH        825 //805 //705
+#define FILAMANT_BOWDEN_LENGTH        850 //805 //705
 
 //===========================================================================
 //=============================Additional Features===========================
@@ -461,7 +461,7 @@ const bool Z_ENDSTOPS_INVERTING = true; // set to true to invert the logic of th
     //
     //  0 -----  1 ----- 2
     //
-    #define TOOLHEAD_SWITCH_FEEDRATE  800
+    #define TOOLHEAD_SWITCH_FEEDRATE  40
 
 #endif
 

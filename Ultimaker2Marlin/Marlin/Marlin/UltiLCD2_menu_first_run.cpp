@@ -83,14 +83,14 @@ static void homeAndParkHeadForCenterAdjustment2()
               enquecommand(buffer);
               // move to switch nozzle
               //plan_buffer_line(RIGHT_SWITCH_FINAL_POSITION_X, RIGHT_SWITCH_WAITING_POSITION_Y, current_position[Z_AXIS], current_position[E_AXIS], 30, active_extruder);
-              sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(TOOLHEAD_SWITCH_FEEDRATE),
+              sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(TOOLHEAD_SWITCH_FEEDRATE)*60,
                                                             int(RIGHT_SWITCH_FINAL_POSITION_X),
                                                             int(RIGHT_SWITCH_WAITING_POSITION_Y));
                                                             //int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_Z, BED_CENTER_ADJUST_Z_M)));
               enquecommand(buffer);
               // move to switch nozzle
               //plan_buffer_line(RIGHT_SWITCH_WAITING_POSITION_X, RIGHT_SWITCH_WAITING_POSITION_Y, current_position[Z_AXIS], current_position[E_AXIS], 40, active_extruder);
-              sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(TOOLHEAD_SWITCH_FEEDRATE),
+              sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(TOOLHEAD_SWITCH_FEEDRATE)*60,
                                                             int(RIGHT_SWITCH_WAITING_POSITION_X),
                                                             int(RIGHT_SWITCH_WAITING_POSITION_Y));
                                                             //int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_Z, BED_CENTER_ADJUST_Z_M)));
@@ -229,7 +229,7 @@ static void changeToSecondNozzleParkHeadToCenter()
       enquecommand(buffer);
       // move to switch nozzle
       //plan_buffer_line(LEFT_SWITCH_MIDDLE_POSITION_X, LEFT_SWITCH_WAITING_POSITION_Y, current_position[Z_AXIS], current_position[E_AXIS], 60, 0);
-      sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(TOOLHEAD_SWITCH_FEEDRATE),
+      sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(TOOLHEAD_SWITCH_FEEDRATE)*60,
                                                     int(LEFT_SWITCH_MIDDLE_POSITION_X),
                                                     int(LEFT_SWITCH_WAITING_POSITION_Y));
                                                     //int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_Z, BED_CENTER_ADJUST_Z_M)));
@@ -237,7 +237,7 @@ static void changeToSecondNozzleParkHeadToCenter()
 
       // move back to waiting position
       // plan_buffer_line(LEFT_SWITCH_WAITING_POSITION_X, LEFT_SWITCH_WAITING_POSITION_Y, current_position[Z_AXIS], current_position[E_AXIS], 60, 0);
-      sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(TOOLHEAD_SWITCH_FEEDRATE),
+      sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(TOOLHEAD_SWITCH_FEEDRATE)*60,
                                                     int(LEFT_SWITCH_WAITING_POSITION_X),
                                                     int(LEFT_SWITCH_WAITING_POSITION_Y));
                                                     //int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_Z, BED_CENTER_ADJUST_Z_M)));
@@ -284,14 +284,14 @@ static void changeToThirdNozzleParkHeadToCenter()
 
       // move to switch nozzle
       //plan_buffer_line(LEFT_SWITCH_FINAL_POSITION_X, LEFT_SWITCH_WAITING_POSITION_Y, current_position[Z_AXIS], current_position[E_AXIS], 60, 0);
-      sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(TOOLHEAD_SWITCH_FEEDRATE),
+      sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(TOOLHEAD_SWITCH_FEEDRATE)*60,
                                                     int(LEFT_SWITCH_FINAL_POSITION_X),
                                                     int(LEFT_SWITCH_WAITING_POSITION_Y));
                                                     //int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_Z, BED_CENTER_ADJUST_Z_M)));
       enquecommand(buffer);
       // moveback to waiting position
   //    plan_buffer_line(LEFT_SWITCH_WAITING_POSITION_X, LEFT_SWITCH_WAITING_POSITION_Y, current_position[Z_AXIS], current_position[E_AXIS], 60, 0);
-      sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(TOOLHEAD_SWITCH_FEEDRATE),
+      sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(TOOLHEAD_SWITCH_FEEDRATE)*60,
                                                     int(LEFT_SWITCH_WAITING_POSITION_X),
                                                     int(LEFT_SWITCH_WAITING_POSITION_Y));
                                                     //int(CHOOSE_BY_EXTRUSION_MODE(BED_CENTER_ADJUST_Z, BED_CENTER_ADJUST_Z_M)));
@@ -332,12 +332,12 @@ static void homeAllStoreSecondNozzleOffsetSettings()
                                                     int(RIGHT_SWITCH_WAITING_POSITION_Y));
       enquecommand(buffer);
       // move to switch nozzle
-      sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(TOOLHEAD_SWITCH_FEEDRATE),
+      sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(TOOLHEAD_SWITCH_FEEDRATE)*60,
                                                     int(RIGHT_SWITCH_FINAL_POSITION_X),
                                                     int(RIGHT_SWITCH_WAITING_POSITION_Y));
       enquecommand(buffer);
       // move to switch nozzle
-      sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(TOOLHEAD_SWITCH_FEEDRATE),
+      sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(TOOLHEAD_SWITCH_FEEDRATE)*60,
                                                     int(RIGHT_SWITCH_WAITING_POSITION_X),
                                                     int(RIGHT_SWITCH_WAITING_POSITION_Y));
       enquecommand(buffer);
