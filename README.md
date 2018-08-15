@@ -13,5 +13,5 @@ This is a modification to the original marlin firmware for Ultimaker2, which can
 
 
 ## Use
-- Enable the ALTER_EXTRUSION_MODE_ON_THE_FLY parameter in Configuration.h file and other parameters related to take effect.
+- Enable the *ALTER_EXTRUSION_MODE_ON_THE_FLY* parameter in Configuration.h file and other parameters related to take effect.
 
