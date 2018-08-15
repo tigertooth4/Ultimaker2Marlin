@@ -43,49 +43,49 @@ extern uint8_t __eeprom__storage[4096];
 
 static inline uint8_t eeprom_read_byte (const uint8_t *__p)
 {
-    return __eeprom__storage[int(__p)];
+    return __eeprom__storage[intptr_t(__p)];//__eeprom__storage[int(__p)];
 }
 static inline uint16_t eeprom_read_word (const uint16_t *__p)
 {
-    return *(uint16_t*)&__eeprom__storage[int(__p)];
+    return *(uint16_t*)&__eeprom__storage[intptr_t(__p)];//[int(__p)];
 }
 static inline uint32_t eeprom_read_dword (const uint32_t *__p)
 {
-    return *(uint32_t*)&__eeprom__storage[int(__p)];
+    return *(uint32_t*)&__eeprom__storage[intptr_t(__p)];
 }
 #define eeprom_read_float eeprom_read_float_
 static inline float eeprom_read_float_ (const float *__p)
 {
-    return *(float*)&__eeprom__storage[int(__p)];
+    return *(float*)&__eeprom__storage[intptr_t(__p)];
 }
 static inline void eeprom_read_block (void *__dst, const void *__src, size_t __n)
 {
-    memcpy(__dst, &__eeprom__storage[int(__src)], __n);
+    memcpy(__dst, &__eeprom__storage[intptr_t(__src)], __n);
 }
 
 static inline void eeprom_write_byte (uint8_t *__p, uint8_t __value)
 {
-    __eeprom__storage[int(__p)] = __value;
+    __eeprom__storage[intptr_t(__p)] = __value;
 }
 static inline void eeprom_write_word (uint16_t *__p, uint16_t __value)
 {
-    *(uint16_t*)&__eeprom__storage[int(__p)] = __value;
+    *(uint16_t*)&__eeprom__storage[intptr_t(__p)] = __value;
 }
 
 static inline void eeprom_write_dword (uint32_t *__p, uint32_t __value)
 {
-    *(uint32_t*)&__eeprom__storage[int(__p)] = __value;
+    *(uint32_t*)&__eeprom__storage[intptr_t(__p)] = __value;
 }
 
 #define eeprom_write_float eeprom_write_float_
 static inline void eeprom_write_float_ (float *__p, float __value)
 {
-    *(float*)&__eeprom__storage[int(__p)] = __value;
+    *(float*)&__eeprom__storage[intptr_t(__p)] = __value;
 }
 
 static inline void eeprom_write_block (const void *__src, void *__dst, size_t __n)
 {
-    memcpy(&__eeprom__storage[int(__dst)], __src, __n);
+    memcpy(&__eeprom__storage[intptr_t(__dst)], __src, __n);
 }
 
 static inline void eeprom_update_byte (uint8_t *__p, uint8_t __value) {}

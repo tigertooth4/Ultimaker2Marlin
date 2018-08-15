@@ -25,6 +25,8 @@ static void lcd_menu_advanced_factory_reset();
 #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
   static void lcd_menu_maintenance_extru_system();
   static void lcd_menu_maintenance_extru_system_halt_for_user_action();
+  static void lcd_menu_maintenance_offsets_n2();
+  static void lcd_menu_maintenance_offsets_n3();
   static uint8_t temp_extrusion_mode;
 #endif
 
@@ -153,12 +155,19 @@ static char* lcd_advanced_item(uint8_t nr)
     else if (nr == 8 + BED_MENU_OFFSET + extrusion_mode * 2)
         strcpy_P(card.longFilename, PSTR("Retraction settings"));
     else if (nr == 9 + BED_MENU_OFFSET + extrusion_mode * 2)
-        strcpy_P(card.longFilename, PSTR("Motion settings"));
-    else if (nr == 10 + BED_MENU_OFFSET + extrusion_mode * 2)
+        strcpy_P(card.longFilename, PSTR("Motion settings..."));
+    // Offset setting menu added
+    // ----vvvv----
+    else if (nr == 10 + BED_MENU_OFFSET + extrusion_mode * 2 && extrusion_mode > 1)
+        strcpy_P(card.longFilename, PSTR("Nozzle 2 offsets..."));
+    else if (nr == 11 + BED_MENU_OFFSET + extrusion_mode * 2 && extrusion_mode > 2)
+        strcpy_P(card.longFilename, PSTR("Nozzle 3 offsets..."));
+    // ----^^^----
+    else if (nr == 9 + BED_MENU_OFFSET + extrusion_mode * 3) // Nozzle offset menu caused skip
         strcpy_P(card.longFilename, PSTR("Version"));
-    else if (nr == 11 + BED_MENU_OFFSET + extrusion_mode * 2)
+    else if (nr == 10 + BED_MENU_OFFSET + extrusion_mode * 3)
         strcpy_P(card.longFilename, PSTR("Runtime stats"));
-    else if (nr == 12 + BED_MENU_OFFSET + extrusion_mode * 2)
+    else if (nr == 11 + BED_MENU_OFFSET + extrusion_mode * 3)
         strcpy_P(card.longFilename, PSTR("Factory reset"));
     else
         strcpy_P(card.longFilename, PSTR("???"));
@@ -171,7 +180,7 @@ return card.longFilename;
 static void lcd_advanced_details(uint8_t nr)
 {
   #ifdef ALTER_EXTRUSION_MODE_ON_THE_FLY
-            char buffer[16];
+            char buffer[32];
             buffer[0] = '\0';
             if (nr == 2)
             {
@@ -204,14 +213,37 @@ static void lcd_advanced_details(uint8_t nr)
             else if (nr == 7 + BED_MENU_OFFSET + extrusion_mode * 2)
             {
                 int_to_string(int(fanSpeed) * 100 / 255, buffer, PSTR("%"));
-            }else if (nr == 10 + BED_MENU_OFFSET + extrusion_mode * 2)
+            }
+            else if (nr == 10 + BED_MENU_OFFSET + extrusion_mode * 2 && extrusion_mode > 1) // Nozzle 2 offsets detail
+            {
+                //DEMO: N2 X.28 Y-.24 Z.6
+                char * c = buffer;
+                strcpy_P(c, PSTR("X"));
+                c+= 1;
+                c = float_to_string(other_extruder_offset[0][0], c, PSTR(" Y"));
+                c = float_to_string(other_extruder_offset[1][0], c, PSTR(" Z"));
+                c = float_to_string(other_extruder_offset[2][0], c);
+            }
+            else if (nr == 11 + BED_MENU_OFFSET + extrusion_mode * 2 && extrusion_mode > 2) // Nozzle 3 offsets detail
+            {
+                //DEMO: N3 X.28 Y-.24 Z.6
+                char * c = buffer;
+                strcpy_P(c, PSTR("X"));
+                c+= 1;
+                c = float_to_string(other_extruder_offset[0][1], c, PSTR(" Y"));
+                c = float_to_string(other_extruder_offset[1][1], c, PSTR(" Z"));
+                c = float_to_string(other_extruder_offset[2][1], c);
+            }
+
+            else if (nr == 9 + BED_MENU_OFFSET + extrusion_mode * 3)
             {
                 lcd_lib_draw_stringP(5, 53, PSTR(STRING_CONFIG_H_AUTHOR));
                 return;
             }else{
                 return;
             }
-            lcd_lib_draw_string(5, 53, buffer);
+            //lcd_lib_draw_string(5, 53, buffer);
+            lcd_lib_draw_string_center(53, buffer);
 
 
   #else // NOT Defined ALTER_EXTRUSION_MODE_ON_THE_FLY
@@ -353,7 +385,7 @@ static void lcd_menu_maintenance_advanced()
   #else  // Defined ALTER_EXTRUSION_MODE_ON_THE_FLY
 
 
-                  lcd_scroll_menu(PSTR("ADVANCED"), 13 + BED_MENU_OFFSET + extrusion_mode * 2, lcd_advanced_item, lcd_advanced_details);
+                  lcd_scroll_menu(PSTR("ADVANCED"), 12 + BED_MENU_OFFSET + extrusion_mode * 3  , lcd_advanced_item, lcd_advanced_details);
                   if (lcd_lib_button_pressed)
                   {
                       if (IS_SELECTED_SCROLL(0))
@@ -433,17 +465,21 @@ static void lcd_menu_maintenance_advanced()
                           lcd_change_to_menu(lcd_menu_maintenance_extrude, 0);
                       }
 
-                      else if (IS_SELECTED_SCROLL(7 + BED_MENU_OFFSET + extrusion_mode * 2))
+                      else if (IS_SELECTED_SCROLL(7 + BED_MENU_OFFSET + extrusion_mode * 2)) // Fan speed setting
                           LCD_EDIT_SETTING_BYTE_PERCENT(fanSpeed, "Fan speed", "%", 0, 100);
-                      else if (IS_SELECTED_SCROLL(8 + BED_MENU_OFFSET + extrusion_mode * 2))
+                      else if (IS_SELECTED_SCROLL(8 + BED_MENU_OFFSET + extrusion_mode * 2)) // Retraction setting
                           lcd_change_to_menu(lcd_menu_maintenance_retraction, SCROLL_MENU_ITEM_POS(0));
-                      else if (IS_SELECTED_SCROLL(9 + BED_MENU_OFFSET + extrusion_mode * 2))
+                      else if (IS_SELECTED_SCROLL(9 + BED_MENU_OFFSET + extrusion_mode * 2)) // Motion setting
                           lcd_change_to_menu(lcd_menu_maintenance_motion, SCROLL_MENU_ITEM_POS(0));
-                      else if (IS_SELECTED_SCROLL(10 + BED_MENU_OFFSET + extrusion_mode * 2))
+                      else if (IS_SELECTED_SCROLL(10 + BED_MENU_OFFSET + extrusion_mode * 2) && extrusion_mode > 1) // Nozzle 2 offset settings
+                          lcd_change_to_menu(lcd_menu_maintenance_offsets_n2, SCROLL_MENU_ITEM_POS(0));
+                      else if (IS_SELECTED_SCROLL(11 + BED_MENU_OFFSET + extrusion_mode * 2) && extrusion_mode > 2) // Nozzle 3 offset Settings
+                          lcd_change_to_menu(lcd_menu_maintenance_offsets_n3, SCROLL_MENU_ITEM_POS(0));
+                      else if (IS_SELECTED_SCROLL(9 + BED_MENU_OFFSET + extrusion_mode * 3))
                           lcd_change_to_menu(lcd_menu_advanced_version, SCROLL_MENU_ITEM_POS(0));
-                      else if (IS_SELECTED_SCROLL(11 + BED_MENU_OFFSET + extrusion_mode * 2))
+                      else if (IS_SELECTED_SCROLL(10 + BED_MENU_OFFSET + extrusion_mode * 3))
                           lcd_change_to_menu(lcd_menu_advanced_stats, SCROLL_MENU_ITEM_POS(0));
-                      else if (IS_SELECTED_SCROLL(12 + BED_MENU_OFFSET + extrusion_mode * 2))
+                      else if (IS_SELECTED_SCROLL(11 + BED_MENU_OFFSET + extrusion_mode * 3))
                           lcd_change_to_menu(lcd_menu_advanced_factory_reset, SCROLL_MENU_ITEM_POS(1));
                   }
 
@@ -714,9 +750,9 @@ static void lcd_menu_maintenance_motion()
         else if (IS_SELECTED_SCROLL(6))
             LCD_EDIT_SETTING(motor_current_setting[0], "Current X/Y", "mA", 0, 1300);
         else if (IS_SELECTED_SCROLL(7))
-            LCD_EDIT_SETTING(motor_current_setting[1], "Current Z", "mA", 0, 1300);
+            LCD_EDIT_SETTING(motor_current_setting[1], "Current Z", "mA", 0, 1400);
         else if (IS_SELECTED_SCROLL(8))
-            LCD_EDIT_SETTING(motor_current_setting[2], "Current E", "mA", 0, 1300);
+            LCD_EDIT_SETTING(motor_current_setting[2], "Current E", "mA", 0, 1400);
     }
 }
 
@@ -957,6 +993,92 @@ static void lcd_menu_maintenance_extru_system_halt_for_user_action()
 
   //kill();
 }
-#endif
 
-#endif//ENABLE_ULTILCD2
+// Offset Settings
+static char* lcd_offsets_item(uint8_t nr)
+{
+    if (nr == 0)
+        strcpy_P(card.longFilename, PSTR("< RETURN"));
+    else if (nr == 1)
+        strcpy_P(card.longFilename, PSTR(" X offset (mm)"));
+    else if (nr == 2)
+        strcpy_P(card.longFilename, PSTR(" Y offset (mm)"));
+    else if (nr == 3)
+        strcpy_P(card.longFilename, PSTR(" Z offset (mm)"));
+    else
+        strcpy_P(card.longFilename, PSTR("???"));
+    return card.longFilename;
+}
+
+static void lcd_offsets_n2_details(uint8_t nr)
+{
+    char buffer[16];
+    if (nr == 0)
+        return;
+    else if(nr == 1)
+        float_to_string(other_extruder_offset[0][0], buffer, PSTR(" mm"));
+    else if(nr == 2)
+        float_to_string(other_extruder_offset[1][0], buffer, PSTR(" mm"));
+    else if(nr == 3)
+        float_to_string(other_extruder_offset[2][0], buffer, PSTR(" mm"));
+    else return;
+    lcd_lib_draw_string(5, 53, buffer);
+}
+
+static void lcd_menu_maintenance_offsets_n2()
+{
+    lcd_scroll_menu(PSTR("NOZZLE 2 OFFSETS"), 4, lcd_offsets_item, lcd_offsets_n2_details);
+    if (lcd_lib_button_pressed)
+    {
+        if (IS_SELECTED_SCROLL(0))
+        {
+            Config_StoreSettings();
+            lcd_change_to_menu(lcd_menu_maintenance_advanced, SCROLL_MENU_ITEM_POS(10 + BED_MENU_OFFSET + extrusion_mode * 2));
+        }
+        else if (IS_SELECTED_SCROLL(1))
+            LCD_EDIT_SETTING_FLOAT001(other_extruder_offset[0][0], "X offset", "mm", -1.5, 1.5);
+        else if (IS_SELECTED_SCROLL(2))
+            LCD_EDIT_SETTING_FLOAT001(other_extruder_offset[1][0], "Y offset", "mm", -1.5, 1.5);
+        else if (IS_SELECTED_SCROLL(3))
+            LCD_EDIT_SETTING_FLOAT001(other_extruder_offset[2][0], "Z offset", "mm", -2.0, 2.0);
+    }
+}
+
+
+static void lcd_offsets_n3_details(uint8_t nr)
+{
+    char buffer[16];
+    if (nr == 0)
+        return;
+    else if(nr == 1)
+        float_to_string(other_extruder_offset[0][1], buffer, PSTR(" mm"));
+    else if(nr == 2)
+        float_to_string(other_extruder_offset[1][1], buffer, PSTR(" mm"));
+    else if(nr == 3)
+        float_to_string(other_extruder_offset[2][1], buffer, PSTR(" mm"));
+    else return;
+    lcd_lib_draw_string(5, 53, buffer);
+}
+
+static void lcd_menu_maintenance_offsets_n3()
+{
+    lcd_scroll_menu(PSTR("NOZZLE 3 OFFSETS"), 4, lcd_offsets_item, lcd_offsets_n3_details);
+    if (lcd_lib_button_pressed)
+    {
+        if (IS_SELECTED_SCROLL(0))
+        {
+            Config_StoreSettings();
+            lcd_change_to_menu(lcd_menu_maintenance_advanced, SCROLL_MENU_ITEM_POS(11 + BED_MENU_OFFSET + extrusion_mode * 2));
+        }
+        else if (IS_SELECTED_SCROLL(1))
+            LCD_EDIT_SETTING_FLOAT001(other_extruder_offset[0][1], "X offset", "mm", -1.5, 1.5);
+        else if (IS_SELECTED_SCROLL(2))
+            LCD_EDIT_SETTING_FLOAT001(other_extruder_offset[1][1], "Y offset", "mm", -1.5, 1.5);
+        else if (IS_SELECTED_SCROLL(3))
+            LCD_EDIT_SETTING_FLOAT001(other_extruder_offset[2][1], "Z offset", "mm", -2.0, 2.0);
+    }
+}
+
+#endif //ALTER_EXTRUSION_MODE_ON_THE_FLY
+
+#endif //ENABLE_ULTILCD2

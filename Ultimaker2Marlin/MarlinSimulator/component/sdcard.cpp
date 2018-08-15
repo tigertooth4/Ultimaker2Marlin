@@ -2,13 +2,13 @@
 #include <avr/io.h>
 
 #include "sdcard.h"
-#include "../../Marlin/SdFatStructs.h"
+#include "../../Marlin/Marlin/SdFatStructs.h"
 
 sdcardSimulation::sdcardSimulation(const char* basePath, int errorRate)
 : errorRate(errorRate)
 {
     this->basePath = basePath;
-    
+
     SPDR.setCallback(DELEGATE(registerDelegate, sdcardSimulation, *this, ISP_SPDR_callback));
 
     sd_state = 0;
@@ -96,7 +96,7 @@ void sdcardSimulation::read_sd_block(int nr)
         if (nr >= 0x401 && nr < 0x500) //root directory: dir_t
         {
             dir_t* dir = (dir_t*)sd_buffer;
-            
+
             DIR* dh = opendir(basePath);
             struct dirent *entry;
             int idx = 0;
@@ -113,7 +113,7 @@ void sdcardSimulation::read_sd_block(int nr)
                 return;
 
             const char* namePtr = entry->d_name;
-            
+
             int fatNr = 0;
             while(*namePtr)
             {
@@ -142,12 +142,12 @@ void sdcardSimulation::read_sd_block(int nr)
             fseek(simFile, 0, SEEK_END);
             dir->fileSize = ftell(simFile);
             fseek(simFile, 0, SEEK_SET);
-            
+
             dir++;
             fatNr++;
 
             closedir(dh);
-            
+
             while(fatNr < 16)
             {
                 dir->attributes = DIR_ATT_HIDDEN;
@@ -176,7 +176,7 @@ void sdcardSimulation::read_sd_block(int nr)
         }
         break;
     }
-    
+
     uint16_t crc = CRC_CCITT(sd_buffer, 512);
     sd_buffer[512] = crc >> 8;
     sd_buffer[513] = crc;
@@ -206,7 +206,7 @@ void sdcardSimulation::ISP_SPDR_callback(uint8_t oldValue, uint8_t& newValue)
     case 1://Return status of CMD
         sd_state = 0;
         sd_buffer_pos = 0;
-        
+
         switch(sd_buffer[0] & 0x3F)
         {
         case 0x00://CMD0 - GO_IDLE_STATE
@@ -236,7 +236,7 @@ void sdcardSimulation::ISP_SPDR_callback(uint8_t oldValue, uint8_t& newValue)
     case 3://Return status of ACMD
         sd_state = 0;
         sd_buffer_pos = 0;
-        
+
         switch(sd_buffer[0] & 0x3F)
         {
         case 0x29://ACMD41 - SD_SEND_OP_COMD
@@ -252,7 +252,7 @@ void sdcardSimulation::ISP_SPDR_callback(uint8_t oldValue, uint8_t& newValue)
             newValue = 0xFE;//DATA_START_BLOCK
         else
             newValue = sd_buffer[sd_buffer_pos-1];
-        
+
         sd_buffer_pos++;
         if (sd_buffer_pos == 512 + 1 + 2)
         {

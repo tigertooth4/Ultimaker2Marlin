@@ -83,8 +83,6 @@ static void homeAndParkHeadForCenterAdjustment2()
               enquecommand(buffer);
               // move to switch nozzle
               //plan_buffer_line(RIGHT_SWITCH_FINAL_POSITION_X, RIGHT_SWITCH_WAITING_POSITION_Y, current_position[Z_AXIS], current_position[E_AXIS], 30, active_extruder);
-              // Note: When use G1, the feedrate should be the "REAL" feedrate (normally 2000-5000)
-              // however, in plen buffer move, the feedrate is normally 30-80
               sprintf_P(buffer, PSTR("G1 F%i X%i Y%i"), int(TOOLHEAD_SWITCH_FEEDRATE)*60,
                                                             int(RIGHT_SWITCH_FINAL_POSITION_X),
                                                             int(RIGHT_SWITCH_WAITING_POSITION_Y));

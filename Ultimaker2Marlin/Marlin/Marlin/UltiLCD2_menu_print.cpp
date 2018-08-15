@@ -610,7 +610,7 @@ static void lcd_menu_print_printing()
     {
         lcd_question_screen(lcd_menu_print_tune, NULL, PSTR("TUNE"), lcd_menu_print_printing, lcd_menu_print_pause, PSTR("PAUSE"));
         uint8_t progress = card.getFilePos() / ((card.getFileSize() + 123) / 124);
-        char buffer[16];
+        char buffer[22];// buffer[16];
         char* c;
         switch(printing_state)
         {
@@ -619,12 +619,30 @@ static void lcd_menu_print_printing()
             lcd_lib_draw_string_center(30, LCD_CACHE_FILENAME(0));
             break;
         case PRINT_STATE_HEATING:
+        #ifndef ALTER_EXTRUSION_MODE_ON_THE_FLY // The original display
             lcd_lib_draw_string_centerP(20, PSTR("Heating"));
             c = int_to_string(dsp_temperature[0], buffer, PSTR("C"));
             *c++ = '/';
             c = int_to_string(target_temperature[0], c, PSTR("C"));
             lcd_lib_draw_string_center(30, buffer);
             break;
+        #else // ALTER_EXTRUSION_MODE_ON_THE_FLY Defined
+            lcd_lib_draw_string_centerP(20, PSTR("Heating"));
+            c = int_to_string(dsp_temperature[0], buffer, PSTR("C"));
+            *c++ = '/';
+            c = int_to_string(target_temperature[0], c, PSTR("C  "));
+            if (extrusion_mode == 2){
+                c = int_to_string(dsp_temperature[1], c, PSTR("C"));
+                *c++ = '/';
+                c = int_to_string(target_temperature[1], c, PSTR("C"));
+            }
+//            if (extrusion_mode == 1)
+//                lcd_lib_draw_string_center(30, buffer);
+//            else if (extrusion_mode > 1)
+            lcd_lib_draw_string_center(30, buffer);
+            break;
+        #endif
+
         case PRINT_STATE_HEATING_BED:
             lcd_lib_draw_string_centerP(20, PSTR("Heating buildplate"));
             c = int_to_string(dsp_temperature_bed, buffer, PSTR("C"));
@@ -1039,7 +1057,7 @@ static void lcd_menu_print_tune()
                         else if (IS_SELECTED_SCROLL(4 + BED_MENU_OFFSET + extrusion_mode))
                             LCD_EDIT_SETTING(extrudemultiply[0], "Material flow", "%", 10, 1000);
                 //#if EXTRUDERS > 1
-                        else if (IS_SELECTED_SCROLL(5 + BED_MENU_OFFSET + extrusion_mode && extrusion_mode > 1))
+                        else if (IS_SELECTED_SCROLL(5 + BED_MENU_OFFSET + extrusion_mode) && extrusion_mode > 1)
                             LCD_EDIT_SETTING(extrudemultiply[1], "Material flow 2", "%", 10, 1000);
                 //#endif
                         else if (IS_SELECTED_SCROLL(4 + BED_MENU_OFFSET + extrusion_mode * 2))

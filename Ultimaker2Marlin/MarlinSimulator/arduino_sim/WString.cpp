@@ -72,7 +72,8 @@ String::String(int value, unsigned char base)
 {
 	init();
 	char buf[18];
-	itoa(value, buf, base);
+	//itoa(value, buf, base);
+	utoa(value,buf,base);
 	*this = buf;
 }
 
@@ -88,7 +89,8 @@ String::String(long value, unsigned char base)
 {
 	init();
 	char buf[34];
-	ltoa(value, buf, base);
+	//ltoa(value, buf, base);
+	utoa(value,buf,base);
 	*this = buf;
 }
 
@@ -185,10 +187,10 @@ void String::move(String &rhs)
 String & String::operator = (const String &rhs)
 {
 	if (this == &rhs) return *this;
-	
+
 	if (rhs.buffer) copy(rhs.buffer, rhs.len);
 	else invalidate();
-	
+
 	return *this;
 }
 
@@ -210,7 +212,7 @@ String & String::operator = (const char *cstr)
 {
 	if (cstr) copy(cstr, strlen(cstr));
 	else invalidate();
-	
+
 	return *this;
 }
 
@@ -251,14 +253,16 @@ unsigned char String::concat(char c)
 unsigned char String::concat(unsigned char num)
 {
 	char buf[4];
-	itoa(num, buf, 10);
+//	itoa(num, buf, 10);
+    utoa(num, buf, 10);
 	return concat(buf, strlen(buf));
 }
 
 unsigned char String::concat(int num)
 {
 	char buf[7];
-	itoa(num, buf, 10);
+	//itoa(num, buf, 10);
+	utoa(num,buf,10);
 	return concat(buf, strlen(buf));
 }
 
@@ -272,7 +276,8 @@ unsigned char String::concat(unsigned int num)
 unsigned char String::concat(long num)
 {
 	char buf[12];
-	ltoa(num, buf, 10);
+	//ltoa(num, buf, 10);
+	utoa(num,buf,10);
 	return concat(buf, strlen(buf));
 }
 
@@ -398,7 +403,7 @@ unsigned char String::equalsIgnoreCase( const String &s2 ) const
 	const char *p2 = s2.buffer;
 	while (*p1) {
 		if (tolower(*p1++) != tolower(*p2++)) return 0;
-	} 
+	}
 	return 1;
 }
 
@@ -429,7 +434,7 @@ char String::charAt(unsigned int loc) const
 	return operator[](loc);
 }
 
-void String::setCharAt(unsigned int loc, char c) 
+void String::setCharAt(unsigned int loc, char c)
 {
 	if (loc < len) buffer[loc] = c;
 }
@@ -543,7 +548,7 @@ String String::substring(unsigned int left, unsigned int right) const
 	if (left > len) return out;
 	if (right > len) right = len;
 	char temp = buffer[right];  // save the replaced character
-	buffer[right] = '\0';	
+	buffer[right] = '\0';
 	out = buffer + left;  // pointer arithmetic
 	buffer[right] = temp;  //restore character
 	return out;

@@ -36,7 +36,6 @@
 			<Add option="-DF_CPU=16000000" />
 			<Add directory="arduino_sim" />
 			<Add directory="avr_sim" />
-			<Add directory="C:/Software/SecretMarlin/UltiLCD2_Sim/" />
 		</Compiler>
 		<Linker>
 			<Add library="SDLmain" />
