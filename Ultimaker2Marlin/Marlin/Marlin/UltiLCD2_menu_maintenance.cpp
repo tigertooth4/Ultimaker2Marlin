@@ -69,9 +69,9 @@ static char* lcd_advanced_item(uint8_t nr)
     #if EXTRUDERS < 2
           strcpy_P(card.longFilename, PSTR("Heatup nozzle"));
     #else
-          strcpy_P(card.longFilename, PSTR("Heatup first nozzle"));
+          strcpy_P(card.longFilename, PSTR("Heatup nozzle 1"));
       else if (nr == 3)
-          strcpy_P(card.longFilename, PSTR("Heatup second nozzle"));
+          strcpy_P(card.longFilename, PSTR("Heatup nozzle 2"));
     #endif
     #if TEMP_SENSOR_BED != 0
       else if (nr == 2 + EXTRUDERS)
@@ -89,9 +89,9 @@ static char* lcd_advanced_item(uint8_t nr)
     #if EXTRUDERS < 2
           strcpy_P(card.longFilename, PSTR("Move material"));
     #else
-          strcpy_P(card.longFilename, PSTR("Move material (1)"));
+          strcpy_P(card.longFilename, PSTR("Move material 1"));
       else if (nr == 7 + BED_MENU_OFFSET + EXTRUDERS)
-          strcpy_P(card.longFilename, PSTR("Move material (2)"));
+          strcpy_P(card.longFilename, PSTR("Move material 2"));
     #endif
       else if (nr == 6 + BED_MENU_OFFSET + EXTRUDERS * 2)
           strcpy_P(card.longFilename, PSTR("Set fan speed"));
@@ -121,12 +121,12 @@ static char* lcd_advanced_item(uint8_t nr)
         if (extrusion_mode < 2)
             strcpy_P(card.longFilename, PSTR("Heatup nozzle"));
         else  //extrusion_mode > 1
-            strcpy_P(card.longFilename, PSTR("Heatup first nozzle"));
+            strcpy_P(card.longFilename, PSTR("Heatup nozzle 1"));
     }
     else if (nr == 4 && extrusion_mode > 1)
-            strcpy_P(card.longFilename, PSTR("Heatup second nozzle"));
+            strcpy_P(card.longFilename, PSTR("Heatup nozzle 2"));
     else if (nr == 5 && extrusion_mode > 2)
-            strcpy_P(card.longFilename, PSTR("Heatup third nozzle"));
+            strcpy_P(card.longFilename, PSTR("Heatup nozzle 3"));
     #if TEMP_SENSOR_BED != 0
     else if (nr == 3 + extrusion_mode)
         strcpy_P(card.longFilename, PSTR("Heatup buildplate"));
@@ -144,24 +144,24 @@ static char* lcd_advanced_item(uint8_t nr)
         if (extrusion_mode < 2)
             strcpy_P(card.longFilename, PSTR("Move material")); // 9
         else
-            strcpy_P(card.longFilename, PSTR("Move material (1)"));
+            strcpy_P(card.longFilename, PSTR("Move material 1"));
     }
     else if (nr == 8 + BED_MENU_OFFSET + extrusion_mode && extrusion_mode > 1)
-            strcpy_P(card.longFilename, PSTR("Move material (2)"));
+            strcpy_P(card.longFilename, PSTR("Move material 2"));
     else if (nr == 9 + BED_MENU_OFFSET + extrusion_mode && extrusion_mode > 2)
-            strcpy_P(card.longFilename, PSTR("Move material (3)"));
+            strcpy_P(card.longFilename, PSTR("Move material 3"));
     else if (nr == 7 + BED_MENU_OFFSET + extrusion_mode * 2)
         strcpy_P(card.longFilename, PSTR("Set fan speed"));
     else if (nr == 8 + BED_MENU_OFFSET + extrusion_mode * 2)
         strcpy_P(card.longFilename, PSTR("Retraction settings"));
     else if (nr == 9 + BED_MENU_OFFSET + extrusion_mode * 2)
-        strcpy_P(card.longFilename, PSTR("Motion settings..."));
+        strcpy_P(card.longFilename, PSTR("Motion settings"));
     // Offset setting menu added
     // ----vvvv----
     else if (nr == 10 + BED_MENU_OFFSET + extrusion_mode * 2 && extrusion_mode > 1)
-        strcpy_P(card.longFilename, PSTR("Nozzle 2 offsets..."));
+        strcpy_P(card.longFilename, PSTR("Nozzle 2 offsets"));
     else if (nr == 11 + BED_MENU_OFFSET + extrusion_mode * 2 && extrusion_mode > 2)
-        strcpy_P(card.longFilename, PSTR("Nozzle 3 offsets..."));
+        strcpy_P(card.longFilename, PSTR("Nozzle 3 offsets"));
     // ----^^^----
     else if (nr == 9 + BED_MENU_OFFSET + extrusion_mode * 3) // Nozzle offset menu caused skip
         strcpy_P(card.longFilename, PSTR("Version"));
@@ -843,7 +843,7 @@ static char* lcd_extru_system_item(uint8_t nr)
   else if (nr == 1)
       strcpy_P(card.longFilename, PSTR("  Single extru-mode"));
   else if (nr == 2)
-      strcpy_P(card.longFilename, PSTR("  Double extru-mode"));
+      strcpy_P(card.longFilename, PSTR("  Dual extru-mode"));
 #if (EXTRUDERS > 2)
   else if (nr == 3)
       strcpy_P(card.longFilename, PSTR("  Triple extru-mode"));
@@ -985,7 +985,7 @@ static void lcd_menu_maintenance_extru_system_halt_for_user_action()
   if(extrusion_mode == 1)
     lcd_lib_draw_string_centerP(20, PSTR("SINGLE mode,"));
   else if(extrusion_mode == 2)
-    lcd_lib_draw_string_centerP(20, PSTR("DOUBLE mode,"));
+    lcd_lib_draw_string_centerP(20, PSTR("DUAL mode,"));
   else if(extrusion_mode == 3)
     lcd_lib_draw_string_centerP(20, PSTR("TRIPLE mode,"));
   lcd_lib_draw_string_centerP(30, PSTR("shutdown & restart"));
